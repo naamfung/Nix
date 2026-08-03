@@ -15,7 +15,6 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/naamfung/Nix/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/naamfung/Nix/ci.yml?style=flat-square&label=ci&labelColor=161b22&logo=githubactions&logoColor=white" alt="CI"/></a>
   <a href="./LICENSE"><img src="https://img.shields.io/github/license/naamfung/Nix.svg?style=flat-square&color=8b949e&labelColor=161b22" alt="license"/></a>
   <a href="https://github.com/naamfung/Nix/stargazers"><img src="https://img.shields.io/github/stars/naamfung/Nix.svg?style=flat-square&color=dbab09&labelColor=161b22&logo=github&logoColor=white" alt="GitHub stars"/></a>
   <a href="https://atomgit.com/naamfung/Nix"><img src="https://atomgit.com/naamfung/Nix/star/badge.svg" alt="AtomGit stars"/></a>

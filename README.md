@@ -1,187 +1,179 @@
 <p align="center">
-  <img src="docs/logo.svg" alt="Reasonix" width="640"/>
+  <img src="docs/logo.svg" alt="Nix" width="640"/>
 </p>
 
 <p align="center">
-  <strong>English</strong>
+  <strong>简体中文</strong>
   &nbsp;·&nbsp;
-  <a href="./README.zh-CN.md">简体中文</a>
-  &nbsp;·&nbsp;
-  <a href="./docs/GUIDE.md">Guide</a>
+  <a href="./docs/GUIDE.md">指南</a>
   &nbsp;·&nbsp;
   <a href="./docs/ACP.md">ACP</a>
   &nbsp;·&nbsp;
-  <a href="./docs/SPEC.md">Spec</a>
+  <a href="./docs/SPEC.md">規格</a>
   &nbsp;·&nbsp;
-  <a href="https://esengine.github.io/DeepSeek-Reasonix/">Website</a>
+  <a href="https://github.com/naamfung/Nix/">官網</a>
   &nbsp;·&nbsp;
   <strong><a href="https://discord.gg/XF78rEME2D">Discord</a></strong>
 </p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/reasonix"><img src="https://img.shields.io/npm/v/reasonix.svg?style=flat-square&color=cb3837&labelColor=161b22&logo=npm&logoColor=white" alt="npm version"/></a>
-  <a href="https://github.com/esengine/DeepSeek-Reasonix/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/esengine/DeepSeek-Reasonix/ci.yml?style=flat-square&label=ci&labelColor=161b22&logo=githubactions&logoColor=white" alt="CI"/></a>
-  <a href="./LICENSE"><img src="https://img.shields.io/npm/l/reasonix.svg?style=flat-square&color=8b949e&labelColor=161b22" alt="license"/></a>
-  <a href="https://www.npmjs.com/package/reasonix"><img src="https://img.shields.io/npm/dm/reasonix.svg?style=flat-square&color=3fb950&labelColor=161b22&label=downloads" alt="downloads"/></a>
-  <a href="https://github.com/esengine/DeepSeek-Reasonix/stargazers"><img src="https://img.shields.io/github/stars/esengine/DeepSeek-Reasonix.svg?style=flat-square&color=dbab09&labelColor=161b22&logo=github&logoColor=white" alt="GitHub stars"/></a>
-  <a href="https://atomgit.com/esengine/DeepSeek-Reasonix"><img src="https://atomgit.com/esengine/DeepSeek-Reasonix/star/badge.svg" alt="AtomGit stars"/></a>
-  <a href="https://github.com/esengine/DeepSeek-Reasonix/graphs/contributors"><img src="https://img.shields.io/github/contributors/esengine/DeepSeek-Reasonix.svg?style=flat-square&color=bc8cff&labelColor=161b22&logo=github&logoColor=white" alt="contributors"/></a>
-  <a href="https://github.com/esengine/DeepSeek-Reasonix/discussions"><img src="https://img.shields.io/github/discussions/esengine/DeepSeek-Reasonix.svg?style=flat-square&color=58a6ff&labelColor=161b22&logo=github&logoColor=white" alt="Discussions"/></a>
+  <a href="https://www.npmjs.com/package/nix"><img src="https://img.shields.io/npm/v/nix.svg?style=flat-square&color=cb3837&labelColor=161b22&logo=npm&logoColor=white" alt="npm version"/></a>
+  <a href="https://github.com/naamfung/Nix/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/naamfung/Nix/ci.yml?style=flat-square&label=ci&labelColor=161b22&logo=githubactions&logoColor=white" alt="CI"/></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/npm/l/nix.svg?style=flat-square&color=8b949e&labelColor=161b22" alt="license"/></a>
+  <a href="https://www.npmjs.com/package/nix"><img src="https://img.shields.io/npm/dm/nix.svg?style=flat-square&color=3fb950&labelColor=161b22&label=downloads" alt="downloads"/></a>
+  <a href="https://github.com/naamfung/Nix/stargazers"><img src="https://img.shields.io/github/stars/naamfung/Nix.svg?style=flat-square&color=dbab09&labelColor=161b22&logo=github&logoColor=white" alt="GitHub stars"/></a>
+  <a href="https://atomgit.com/naamfung/Nix"><img src="https://atomgit.com/naamfung/Nix/star/badge.svg" alt="AtomGit stars"/></a>
+  <a href="https://github.com/naamfung/Nix/graphs/contributors"><img src="https://img.shields.io/github/contributors/naamfung/Nix.svg?style=flat-square&color=bc8cff&labelColor=161b22&logo=github&logoColor=white" alt="contributors"/></a>
+  <a href="https://github.com/naamfung/Nix/discussions"><img src="https://img.shields.io/github/discussions/naamfung/Nix.svg?style=flat-square&color=58a6ff&labelColor=161b22&logo=github&logoColor=white" alt="Discussions"/></a>
   <a href="https://discord.gg/XF78rEME2D"><img src="https://img.shields.io/badge/discord-join-5865F2.svg?style=flat-square&labelColor=161b22&logo=discord&logoColor=white" alt="Discord"/></a>
 </p>
 
 <br/>
 
-<h3 align="center">A DeepSeek-native AI coding agent for your terminal.</h3>
-<p align="center">A config- and plugin-driven harness — a single static Go binary, tuned around DeepSeek's prefix cache so token costs stay low across long sessions.</p>
+<h3 align="center">面向終端的 DeepSeek 原生 AI coding agent。</h3>
+<p align="center">由配置與插件驅動的極薄 harness——單一靜態 Go 二進制，圍繞 DeepSeek 的前綴緩存調優，長會話也能把 token 成本壓低。</p>
 
 <br/>
 
 > [!IMPORTANT]
-> **Community · 加入社区** — bilingual Discord for setup help (`#help` / `#求助`), workflow showcases, and feature ideas. → **<https://discord.gg/XF78rEME2D>**
+> **加入社區 · Community** — 雙語 Discord，提供安裝答疑（`#help` / `#求助`）、工作流展示與功能想法。→ **<https://discord.gg/XF78rEME2D>**
 
 <br/>
 
-## Features
+## 特性
 
-- **Config-driven.** Providers, the agent, enabled tools, and plugins are all
-  declared in `reasonix.toml`. No hardcoded models.
-- **Multi-model & composable.** DeepSeek ships as a preset; any
-  OpenAI-compatible endpoint is a config entry, not new code. Optionally run
-  two models together (executor + planner) in separate, cache-stable sessions.
-- **Plugin-driven.** External tools run as subprocesses over stdio JSON-RPC
-  (MCP-compatible). Built-in tools self-register at compile time.
-- **Cache-aware context maintenance.** Startup injects a small stable environment
-  summary, stale tool output is snipped/pruned before summary compaction, and the
-  built-in tool schema contract is documented for regression review.
-- **Zero-friction distribution.** `CGO_ENABLED=0` single binary; cross-compile
-  to six targets with one command. The only dependency is a TOML parser.
+- **配置驅動**：provider、agent、啟用的工具、插件全部在 `nix.toml` 中聲明，
+  內核無硬編碼模型。
+- **多模型 · 可組合**：DeepSeek 作為預設內建；任何 OpenAI 兼容
+  端點都只是一條配置。可選讓兩個模型協同（執行器 + 規劃器），各自獨立、緩存穩定的 session。
+- **插件驅動**：外部工具以子進程形式運行，通過 stdio JSON-RPC 通信（MCP 兼容）；
+  內建工具在編譯期自註冊。
+- **緩存友好的上下文維護**：啟動時注入穩定的環境摘要；舊工具輸出會先 snip/prune，
+  再進入摘要 compaction；內建工具 schema 合約有文檔和回歸測試保護。
+- **零摩擦分發**：`CGO_ENABLED=0` 單一二進制；一條命令交叉編譯到六個目標平台。
+  唯一依賴是一個 TOML 解析庫。
 
-## Install
+## 安裝
 
-Choose the path that matches how you want to use Reasonix. The CLI/TUI,
-desktop app, and VS Code extension all use the same local Reasonix engine.
+選擇適合你的使用路徑。CLI/TUI、桌面端和 VS Code 擴展都使用同一套本地
+Nix 引擎。
 
-### Path A: CLI / TUI
+### 路徑 A：CLI / TUI
 
-Install the native binary through npm on any supported platform, or use
-Homebrew on macOS:
+任意支持的平台都可以通過 npm 安裝原生二進制：
 
 ```sh
-npm i -g reasonix                  # any OS; pulls the prebuilt native binary
-brew install esengine/reasonix/reasonix   # macOS
+npm i -g nix                  # 任意系統;自動拉取對應平台的原生二進制
 ```
 
-Prebuilt archives (`darwin|linux|windows × amd64|arm64`) and `SHA256SUMS` are on
-every [GitHub release](https://github.com/esengine/DeepSeek-Reasonix/releases).
+預編譯歸檔(`darwin|linux|windows × amd64|arm64`)和 `SHA256SUMS` 見每個
+[GitHub release](https://github.com/naamfung/Nix/releases)。
 
-### Path B: Desktop app
+### 路徑 B：桌面端
 
-Use the [official download page](https://reasonix.io/?download=desktop#start)
-for the latest desktop build.
+前往[官方下載頁](https://github.com/naamfung/Nix/releases)獲取最新桌面版本。
 
-| Platform | Package | Architecture |
+| 平台 | 包安裝包 | 架構 |
 | --- | --- | --- |
-| macOS | Universal `.dmg` or `.zip` | Apple Silicon / Intel |
-| Windows | Installer `.exe` or portable `.zip` | x64 / ARM64 |
-| Linux | `.deb` or `.tar.gz` | x64 |
+| macOS | 通用 `.dmg` 或 `.zip` | Apple Silicon / Intel |
+| Windows | 安裝器 `.exe` 或便攜 `.zip` | x64 / ARM64 |
+| Linux | `.deb` 或 `.tar.gz` | x64 |
 
-Windows installers are code-signed through [SignPath.io](https://signpath.io/)
-with a free certificate provided by the [SignPath Foundation](https://signpath.org/).
+Windows 安裝器通過 [SignPath.io](https://signpath.io/) 完成代碼簽名，證書由
+[SignPath 基金會](https://signpath.org/) 免費提供。
 
-### Path C: VS Code extension
+### 路徑 C：VS Code 擴展
 
-Complete Path A first. The extension does not bundle the CLI; it starts your
-local `reasonix acp` backend and adds native chat, editor context, tool-call
-approvals, model selection, and workspace sessions.
+請先完成路徑 A。擴展不內置 CLI，而是啟動本機的 `nix acp` 後端，
+並提供原生聊天、編輯器上下文、工具調用審批、模型選擇和工作區會話。
 
-- **VS Code:** [install from Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=SivanLiu.reasonix-agent)
-- **VSCodium / Eclipse Theia:** [install from Open VSX Registry](https://open-vsx.org/extension/SivanLiu/reasonix-agent)
-- **Extension ID:** `SivanLiu.reasonix-agent` · [source and usage guide](https://github.com/SivanCola/reasonix-vscode)
+- **VS Code：** [從 Visual Studio Marketplace 安裝](https://marketplace.visualstudio.com/items?itemName=SivanLiu.nix-agent)
+- **VSCodium / Eclipse Theia：** [從 Open VSX Registry 安裝](https://open-vsx.org/extension/SivanLiu/nix-agent)
+- **擴展 ID：** `SivanLiu.nix-agent` · [源碼與使用說明](https://github.com/SivanCola/nix-vscode)
 
-### Path D: Build from source
+### 路徑 D：從源碼構建
 
 ```sh
-git clone https://github.com/esengine/DeepSeek-Reasonix.git
-cd DeepSeek-Reasonix
-make build      # -> bin/reasonix(.exe)
-make cross      # -> dist/ (darwin|linux|windows × amd64|arm64)
+git clone https://github.com/naamfung/Nix.git
+cd Nix
+make build      # -> bin/nix(.exe)
+make cross      # -> dist/（darwin|linux|windows × amd64|arm64）
 ```
 
-## Quick start
+## 快速開始
 
 ### CLI / TUI
 
-These commands are for the CLI/TUI installed through Path A:
+以下命令僅適用於通過路徑 A 安裝的 CLI/TUI：
 
 ```sh
-reasonix setup                      # configure a provider and model
-reasonix                            # start an interactive session
-reasonix run "implement the TODOs in main.go"
+nix setup                      # 配置 provider 和模型
+nix                            # 啟動交互式會話
+nix run "把 main.go 裡的 TODO 實現掉"
 ```
 
-In an interactive session, run `/init` when you want Reasonix to create project
-instructions.
+需要項目指令時，可在交互式會話中運行 `/init`。
 
-### Desktop app
+### 桌面端
 
-Download the installer for your platform from the
-[official download page](https://reasonix.io/?download=desktop#start), install
-and launch Reasonix, then configure a provider and model in the app. The CLI
-commands above are not required for the desktop app.
+從[官方下載頁](https://github.com/naamfung/Nix/releases)下載對應系統的安裝包，
+安裝並啟動 Nix，然後在應用內配置 provider 和模型即可使用。桌面端無需執行
+上面的 CLI 命令。
 
-For advanced CLI usage and configuration, see the **[CLI reference](./docs/CLI.md)**,
-**[Guide](./docs/GUIDE.md)**, and
-**[configuration paths](./docs/CONFIG_PATHS.md)**.
+CLI 進階用法和詳細配置見 **[CLI 命令參考](./docs/CLI.md)**、
+**[指南](./docs/GUIDE.md)** 和
+**[配置路徑](./docs/CONFIG_PATHS.md)**。
 
-## Documentation
+## 文檔
 
-- **Getting started:** [Guide](./docs/GUIDE.md) · [CLI reference](./docs/CLI.md) ·
-  [Configuration paths](./docs/CONFIG_PATHS.md) · [ACP editor integration](./docs/ACP.md)
-- **Features & troubleshooting:** [Subagent profiles](./docs/SUBAGENT_PROFILES.md) ·
+- **開始使用：** [指南](./docs/GUIDE.md) ·
+  [CLI 命令參考](./docs/CLI.md) · [配置路徑](./docs/CONFIG_PATHS.md) ·
+  [ACP 編輯器接入](./docs/ACP.md)
+- **功能與排障：** [子智能體 Profile](./docs/SUBAGENT_PROFILES.md) ·
   [Context Engine v2](./docs/SESSION_MEMORY_RETRIEVAL.md) ·
-  [Capability diagnostics](./docs/CAPABILITY_DIAGNOSTICS.md) ·
-  [Recovery and updates](./docs/RECOVERY.md) · [Bot guide](./docs/BOT_GUIDE.md) ·
-  [Checkpoints & rewind](./docs/CHECKPOINTS.md)
-- **Engineering & migration:** [Spec](./docs/SPEC.md) ·
-  [Task contracts & pause policy](./docs/TASK_CONTRACT.md) ·
-  [Tool contract](./docs/TOOL_CONTRACT.md) · [Migrating from 0.x](./docs/MIGRATING.md)
+  [能力診斷](./docs/CAPABILITY_DIAGNOSTICS.md) ·
+  [恢復與安全模式](./docs/RECOVERY.md) ·
+  [機器人使用指南](./docs/BOT_GUIDE.md) ·
+  [Checkpoints 與 rewind](./docs/CHECKPOINTS.md)
+- **工程與遷移：** [規格](./docs/SPEC.md) ·
+  [任務合約與暫停策略](./docs/TASK_CONTRACT.md) ·
+  [工具合約](./docs/TOOL_CONTRACT.md) ·
+  [從 0.x 遷移](./docs/MIGRATING.md)
 
-## Star History
+## Star 趨勢
 
-<a href="https://www.star-history.com/?repos=esengine%2FDeepSeek-Reasonix&type=date&legend=top-left">
+<a href="https://www.star-history.com/?repos=naamfung%2FNix&type=date&legend=top-left">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/esengine/DeepSeek-Reasonix/star-history/assets/star-history/star-history-dark.svg" />
-   <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/esengine/DeepSeek-Reasonix/star-history/assets/star-history/star-history-light.svg" />
-   <img alt="Star History Chart" src="https://raw.githubusercontent.com/esengine/DeepSeek-Reasonix/star-history/assets/star-history/star-history-light.svg" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/naamfung/Nix/star-history/assets/star-history/star-history-dark.svg" />
+   <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/naamfung/Nix/star-history/assets/star-history/star-history-light.svg" />
+   <img alt="Star History Chart" src="https://raw.githubusercontent.com/naamfung/Nix/star-history/assets/star-history/star-history-light.svg" />
  </picture>
 </a>
 
 <br/>
 
-## Acknowledgments
+## 致謝
 
-A small list of folks whose work has shaped Reasonix the most — the current top
-20 contributors by commit count. The full contributor graph is on
-[GitHub](https://github.com/esengine/DeepSeek-Reasonix/graphs/contributors?all=1).
+下面這些朋友的工作塑造了 Nix 今天的样子 —— 當前按 commit 數統計的前 20 名貢獻者。
+完整貢獻者列表在
+[GitHub](https://github.com/naamfung/Nix/graphs/contributors?all=1)。
 
 <!-- reasonix-top-contributors:start -->
 | Contributor | Contributor | Contributor | Contributor |
 | --- | --- | --- | --- |
 | [**SivanCola**](https://github.com/SivanCola) | [**esengine**](https://github.com/esengine) | [**ttmouse**](https://github.com/ttmouse) | [**lifu963**](https://github.com/lifu963) |
-| **reasonix** (anonymous) | [**HUQIANTAO**](https://github.com/HUQIANTAO) | [**GTC2080**](https://github.com/GTC2080) | [**light-front-theory**](https://github.com/light-front-theory) |
-| **merge-order-check** (anonymous) | [**Li-Charles-One**](https://github.com/Li-Charles-One) | [**eghrhegpe**](https://github.com/eghrhegpe) | **wufengfan** (anonymous) |
+| **reasonix**（anonymous） | [**HUQIANTAO**](https://github.com/HUQIANTAO) | [**GTC2080**](https://github.com/GTC2080) | [**light-front-theory**](https://github.com/light-front-theory) |
+| **merge-order-check**（anonymous） | [**Li-Charles-One**](https://github.com/Li-Charles-One) | [**eghrhegpe**](https://github.com/eghrhegpe) | **wufengfan**（anonymous） |
 | [**CVEngineer66**](https://github.com/CVEngineer66) | [**dependabot\[bot\]**](https://github.com/apps/dependabot) | [**lanshi17**](https://github.com/lanshi17) | [**SuMuxi66**](https://github.com/SuMuxi66) |
 | [**CnsMaple**](https://github.com/CnsMaple) | [**cyq1017**](https://github.com/cyq1017) | [**JesonChou**](https://github.com/JesonChou) | [**XTLine**](https://github.com/XTLine) |
 <!-- reasonix-top-contributors:end -->
 
-Also a separate thank-you to [**Bernardxu123**](https://github.com/Bernardxu123)
-for designing the project logo, and to
-[AIGC Link](https://xhslink.com/m/80ngts127cA) for promoting the project on XiaoHongShu.
+另外特別感謝 [**Bernardxu123**](https://github.com/Bernardxu123) 設計的項目 logo，
+以及 [AIGC Link](https://xhslink.com/m/80ngts127cA) 在小紅書上的推廣。
 
 <p align="center">
-  <a href="https://github.com/esengine/DeepSeek-Reasonix/graphs/contributors">
-    <img src="https://contrib.rocks/image?repo=esengine/DeepSeek-Reasonix&max=100&columns=12" alt="Contributors to esengine/DeepSeek-Reasonix" width="860"/>
+  <a href="https://github.com/naamfung/Nix/graphs/contributors">
+    <img src="https://contrib.rocks/image?repo=naamfung/Nix&max=100&columns=12" alt="naamfung/Nix 貢獻者" width="860"/>
   </a>
 </p>
 
@@ -190,22 +182,27 @@ for designing the project logo, and to
 ---
 
 <p align="center">
-  <sub>MIT — see <a href="./LICENSE">LICENSE</a></sub>
+  <sub>MIT —— 見 <a href="./LICENSE">LICENSE</a></sub>
   <br/>
-  <sub>Built by the community at <a href="https://github.com/esengine/DeepSeek-Reasonix/graphs/contributors">esengine/DeepSeek-Reasonix</a></sub>
+  <sub>由 <a href="https://github.com/naamfung/Nix/graphs/contributors">naamfung/Nix</a> 社區共建</sub>
 </p>
 
 ---
 
-<p align="center"><sub><strong>Support this project</strong></sub></p>
+<p align="center"><sub><strong>支持本項目</strong></sub></p>
 
-If Reasonix has been useful and you'd like to say thanks, you can. It stays a
-coffee, not a contract — donations don't buy feature priority or change how
-issues get triaged.
+如果 Nix 幫你省了時間或 token，歡迎請杯咖啡。捐助不會換來 feature
+優先級，也不會影響 issue 的處理順序——就是「謝謝」。
 
-- **International** — PayPal: [paypal.me/yuhuahui](https://paypal.me/yuhuahui)
-- **国内** — 微信支付（扫码）
+- **國內** — 微信支付（掃二維碼）
+- **海外** — PayPal: [paypal.me/yuhuahui](https://paypal.me/yuhuahui)
 
 <p align="center">
-  <img src=".github/sponsor/wechat-pay.jpg" alt="WeChat Pay QR code" width="180"/>
+  <img src=".github/sponsor/wechat-pay.jpg" alt="微信支付收款碼" width="180"/>
+</p>
+
+---
+
+<p align="center">
+  <sub>This project is based on <strong>REASONIX</strong>. See the upstream repository at <a href="https://github.com/esengine/DeepSeek-Reasonix">esengine/DeepSeek-Reasonix</a>.</sub>
 </p>

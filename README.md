@@ -1,6 +1,4 @@
-<p align="center">
-  <img src="docs/logo.svg" alt="Nix" width="640"/>
-</p>
+<h1 align="center">NIX</h1>
 
 <p align="center">
   <strong>简体中文</strong>
@@ -17,13 +15,12 @@
 <p align="center">
   <a href="./LICENSE"><img src="https://img.shields.io/github/license/naamfung/Nix.svg?style=flat-square&color=8b949e&labelColor=161b22" alt="license"/></a>
   <a href="https://github.com/naamfung/Nix/stargazers"><img src="https://img.shields.io/github/stars/naamfung/Nix.svg?style=flat-square&color=dbab09&labelColor=161b22&logo=github&logoColor=white" alt="GitHub stars"/></a>
-  <a href="https://atomgit.com/naamfung/Nix"><img src="https://atomgit.com/naamfung/Nix/star/badge.svg" alt="AtomGit stars"/></a>
 </p>
 
 <br/>
 
-<h3 align="center">面向終端的 DeepSeek 原生 AI coding agent。</h3>
-<p align="center">由配置與插件驅動的極薄 harness——單一靜態 Go 二進制，圍繞 DeepSeek 的前綴緩存調優，長會話也能把 token 成本壓低。</p>
+<h3 align="center">面向本地模型服務的原生 AI coding agent。</h3>
+<p align="center">由配置與插件驅動的極薄 harness——單一靜態 Go 二進制，圍繞本地模型的前綴緩存調優，長會話也能把 token 成本壓低。</p>
 
 <br/>
 

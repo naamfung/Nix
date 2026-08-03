@@ -22,8 +22,8 @@ func TestAssistantMarkdownHasIdentityAndIndentedBody(t *testing.T) {
 	if len(lines) < 4 {
 		t.Fatalf("assistant block should contain a header, gap, and wrapped body:\n%s", rendered)
 	}
-	if lines[0] != "  ◆ Reasonix" {
-		t.Fatalf("assistant header = %q, want %q", lines[0], "  ◆ Reasonix")
+	if lines[0] != "  ◆ Nix" {
+		t.Fatalf("assistant header = %q, want %q", lines[0], "  ◆ Nix")
 	}
 	if lines[1] != "" {
 		t.Fatalf("assistant header/body separator = %q, want blank row", lines[1])

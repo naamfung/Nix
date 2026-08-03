@@ -153,7 +153,7 @@ func renderAssistantMarkdown(raw string, contentWidth int) string {
 		rendered = raw
 	}
 	body := strings.TrimRight(rendered, "\n")
-	header := indent + accent("◆") + " " + bold("Reasonix")
+	header := indent + accent("◆") + " " + bold("Nix")
 	if body == "" {
 		return header
 	}
@@ -175,7 +175,7 @@ func renderAssistantMarkdownCopy(raw string, contentWidth int, prefix string) st
 		rendered = raw
 	}
 	body := strings.TrimRight(rendered, "\n")
-	header := indent + accent("◆") + " " + bold("Reasonix")
+	header := indent + accent("◆") + " " + bold("Nix")
 	if body == "" {
 		return header
 	}

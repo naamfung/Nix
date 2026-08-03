@@ -665,7 +665,7 @@ default_model = "deepseek"   # provider name (→ its default model) or "provide
 # cursor_shape = "bar"              # CLI/TUI textarea cursor: underline|block|bar
 
 [agent]
-system_prompt = "You are Reasonix, a coding agent..."  # or system_prompt_file = "..."
+system_prompt = "You are Nix, a coding agent..."  # or system_prompt_file = "..."
 temperature       = 0.0
 reasoning_language = "auto"       # visible reasoning text: auto|zh|en
 # plan_mode_read_only_commands = ["gh issue view"]   # legacy compatibility only; Plan bash uses Permissions

@@ -33,6 +33,18 @@ agent. It is the Reasonix analog of Claude Code's CLAUDE.md.
 
 ## Notes
 
+## Pre-push CI simulation and rules
+
+This section is meaningful as pre-push rules. When pushing (especially for AI operations), you must run this flow beforehand to standardize the code:
+
+```bash
+gofmt -w .                          # catches gofmt (saves ~13s CI)
+go vet ./...                        # catches vet warnings (saves ~52s CI/lint)
+go test ./internal/tool/builtin/ ./internal/boot/  # catches tool/boot test breaks
+```
+
+CI runs `golangci-lint` (not locally available), but gofmt + vet already block ~80% of fast-fail scenarios.
+
 ## Import cycle rule
 
 Before importing a new internal package from a non-test file, verify the target package's **test files** aren't already importing back to you:

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"path/filepath"
 
 	fileenc "reasonix/internal/fileutil/encoding"
@@ -76,13 +75,15 @@ func (w writeFile) Execute(ctx context.Context, args json.RawMessage) (string, e
 			return fmt.Sprintf("wrote %d bytes to %s", len(p.Content), p.Path), nil
 		}
 	}
-	if dir := filepath.Dir(p.Path); dir != "" && dir != "." {
-		if err := os.MkdirAll(dir, 0o755); err != nil {
-			return "", fmt.Errorf("mkdir %s: %w", dir, err)
-		}
+
+	// Try creating directories with path variants for Windows paths under Unix-style shells.
+	writePath, merr := tryMkdirAllVariants(tryWinPathVariants(p.Path))
+	if merr != nil {
+		return "", fmt.Errorf("mkdir %s: %w", filepath.Dir(p.Path), merr)
 	}
-	if err := writeFileEncoded(p.Path, p.Content, enc); err != nil {
-		return "", fmt.Errorf("write %s: %w", p.Path, err)
+
+	if err := writeFileEncoded(writePath, p.Content, enc); err != nil {
+		return "", fmt.Errorf("write %s: %w", writePath, err)
 	}
-	return fmt.Sprintf("wrote %d bytes to %s", len(p.Content), p.Path), nil
+	return fmt.Sprintf("wrote %d bytes to %s", len(p.Content), writePath), nil
 }

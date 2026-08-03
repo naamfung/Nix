@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -280,4 +281,93 @@ func skipWalkDir(root, path, name string) bool {
 // absolute paths; empty means unconfined.
 func skipForbidDir(path string, forbidRoots []string) bool {
 	return confineRead(forbidRoots, path)
+}
+
+// tryWinPathVariants returns a list of path variants to try when a Windows path
+// fails under a Unix-style shell environment. It includes the original path,
+// the forward-slash version, and the /drive/ version.
+func tryWinPathVariants(original string) []string {
+	var tries []string
+	tries = append(tries, original)
+
+	if isWindowsAbsPath(original) {
+		// Try with forward slashes
+		fwd := filepath.ToSlash(original)
+		if fwd != original {
+			tries = append(tries, fwd)
+		}
+
+		// Try with /drive/ format
+		// e.g., D:\foo\bar -> /D/foo/bar
+		drive := strings.ToUpper(string(original[0]))
+		rest := original[2:] // skip "X:"
+		if len(rest) > 0 && (rest[0] == '\\' || rest[0] == '/') {
+			rest = filepath.ToSlash(rest)
+			// filepath.ToSlash("\foo\bar") returns "/foo/bar"
+			tries = append(tries, "/"+drive+rest)
+		} else {
+			// No leading slash after drive letter, e.g., C:foo
+			rest = filepath.ToSlash(rest)
+			tries = append(tries, "/"+drive+":"+rest)
+		}
+	}
+
+	// Remove duplicates
+	seen := make(map[string]bool)
+	var unique []string
+	for _, t := range tries {
+		if !seen[t] {
+			seen[t] = true
+			unique = append(unique, t)
+		}
+	}
+	return unique
+}
+
+func isWindowsAbsPath(p string) bool {
+	if len(p) >= 2 && p[1] == ':' {
+		drive := strings.ToUpper(string(p[0]))
+		if drive >= "A" && drive <= "Z" {
+			if len(p) == 2 {
+				return true // "C:"
+			}
+			if len(p) > 2 {
+				return p[2] == '\\' || p[2] == '/'
+			}
+		}
+	}
+	return false
+}
+
+// tryOpenPathVariants tries to open files using a list of path variants.
+// It returns the first successful *os.File, the path that was opened, and nil error.
+// If all attempts fail, it returns nil, "", and the last error.
+func tryOpenPathVariants(variants []string) (*os.File, string, error) {
+	var lastErr error
+	for _, v := range variants {
+		f, err := os.Open(v)
+		if err == nil {
+			return f, v, nil
+		}
+		lastErr = err
+	}
+	return nil, "", lastErr
+}
+
+// tryMkdirAllVariants tries to create directories using a list of path variants.
+// It returns the first successful variant path, or the last error if all fail.
+func tryMkdirAllVariants(variants []string) (string, error) {
+	var lastErr error
+	for _, v := range variants {
+		dir := filepath.Dir(v)
+		if dir == "" || dir == "." {
+			return v, nil
+		}
+		err := os.MkdirAll(dir, 0o755)
+		if err == nil {
+			return v, nil
+		}
+		lastErr = err
+	}
+	return "", lastErr
 }

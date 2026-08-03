@@ -1431,6 +1431,10 @@ func (e *ProviderEntry) PriceForModel(model string) *provider.Pricing {
 	if e == nil {
 		return nil
 	}
+	// Local/self-hosted models have zero cost.
+	if e.BaseURL != "" && providerBaseURLAllowsMissingAPIKey(e.BaseURL) {
+		return &provider.Pricing{CacheHit: 0, Input: 0, Output: 0, Currency: ""}
+	}
 	if e.Prices != nil {
 		if p := e.Prices[strings.TrimSpace(model)]; p != nil {
 			return clonePricing(p)

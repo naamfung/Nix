@@ -184,9 +184,9 @@ type chatTUI struct {
 	// collapsed output block, so Ctrl+B can rewrite it in place.
 	shellTranscriptIdx map[string]int
 	// toolLineCountByID keeps a switched-away tool's last line count so a late
-	// ToolResult can still render "⎿ N lines" (shellOutputs only tracks "shell-" ids).
+	// ToolResult can still render "※ N lines" (shellOutputs only tracks "shell-" ids).
 	toolLineCountByID map[string]int
-	// toolStreamStart / toolStreamFrame drive the "⎿ working · Ns" line shown
+	// toolStreamStart / toolStreamFrame drive the "※ working · Ns" line shown
 	// under a dispatched tool that hasn't produced output yet, so a slow tool
 	// reads as making progress rather than frozen.
 	toolStreamStart time.Time
@@ -2067,7 +2067,7 @@ func (m *chatTUI) streamReasoning(chunk string) {
 }
 
 // reasoningBlock renders raw thinking text as dim, width-wrapped lines under a
-// "⎿" connector that ties the block to the "▎ thinking…" marker above it. A
+// "※" connector that ties the block to the "▎ thinking…" marker above it. A
 // positive maxLines keeps only the trailing visual lines (the live view); 0
 // renders all (verbose collapse).
 func reasoningBlock(raw string, width, maxLines int) string {
@@ -2191,7 +2191,7 @@ func (m *chatTUI) pushToolLine(line string) {
 }
 
 // collapseToolOutput replaces a finished tool's live block with a dim
-// "⎿ N lines" summary, so the scrollback keeps a marker of the run without the
+// "※ N lines" summary, so the scrollback keeps a marker of the run without the
 // full output (which the model already received). For shell commands ("shell-"
 // prefix), it shows the first shellPreviewLines with a Ctrl+B hint instead.
 // No-op when id isn't streaming. resultOutput (the ToolResult's final output)
@@ -2379,7 +2379,7 @@ func (m *chatTUI) toggleShellOutput() {
 }
 
 // toolWorkingFrames is the braille spinner cycled once per second on the
-// "⎿ working · Ns" line of a tool that hasn't streamed output yet.
+// "※ working · Ns" line of a tool that hasn't streamed output yet.
 var toolWorkingFrames = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
 
 // beginToolRunning opens an empty live block under a just-dispatched tool card,
@@ -3785,7 +3785,7 @@ func (m *chatTUI) ingestEvent(e event.Event) {
 	case event.ToolResult:
 		// A successful result is silent (it only feeds the model); a blocked/failed
 		// call surfaces a red "⏺ Verb ⊘ <reason>" card. A live-output block (bash)
-		// collapses to a one-line "⎿ N lines" summary first. Pass the final
+		// collapses to a one-line "※ N lines" summary first. Pass the final
 		// output so collapseToolOutput has a last-resort source for the line
 		// count when the live state was already reset by a back-to-back tool.
 		m.collapseToolOutput(e.Tool.ID, e.Tool.Output)

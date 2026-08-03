@@ -12,8 +12,6 @@
   <a href="./docs/SPEC.md">規格</a>
   &nbsp;·&nbsp;
   <a href="https://github.com/naamfung/Nix/">官網</a>
-  &nbsp;·&nbsp;
-  <strong><a href="https://discord.gg/XF78rEME2D">Discord</a></strong>
 </p>
 
 <p align="center">
@@ -23,20 +21,12 @@
   <a href="https://www.npmjs.com/package/nix"><img src="https://img.shields.io/npm/dm/nix.svg?style=flat-square&color=3fb950&labelColor=161b22&label=downloads" alt="downloads"/></a>
   <a href="https://github.com/naamfung/Nix/stargazers"><img src="https://img.shields.io/github/stars/naamfung/Nix.svg?style=flat-square&color=dbab09&labelColor=161b22&logo=github&logoColor=white" alt="GitHub stars"/></a>
   <a href="https://atomgit.com/naamfung/Nix"><img src="https://atomgit.com/naamfung/Nix/star/badge.svg" alt="AtomGit stars"/></a>
-  <a href="https://github.com/naamfung/Nix/graphs/contributors"><img src="https://img.shields.io/github/contributors/naamfung/Nix.svg?style=flat-square&color=bc8cff&labelColor=161b22&logo=github&logoColor=white" alt="contributors"/></a>
-  <a href="https://github.com/naamfung/Nix/discussions"><img src="https://img.shields.io/github/discussions/naamfung/Nix.svg?style=flat-square&color=58a6ff&labelColor=161b22&logo=github&logoColor=white" alt="Discussions"/></a>
-  <a href="https://discord.gg/XF78rEME2D"><img src="https://img.shields.io/badge/discord-join-5865F2.svg?style=flat-square&labelColor=161b22&logo=discord&logoColor=white" alt="Discord"/></a>
 </p>
 
 <br/>
 
 <h3 align="center">面向終端的 DeepSeek 原生 AI coding agent。</h3>
 <p align="center">由配置與插件驅動的極薄 harness——單一靜態 Go 二進制，圍繞 DeepSeek 的前綴緩存調優，長會話也能把 token 成本壓低。</p>
-
-<br/>
-
-> [!IMPORTANT]
-> **加入社區 · Community** — 雙語 Discord，提供安裝答疑（`#help` / `#求助`）、工作流展示與功能想法。→ **<https://discord.gg/XF78rEME2D>**
 
 <br/>
 
@@ -140,65 +130,10 @@ CLI 進階用法和詳細配置見 **[CLI 命令參考](./docs/CLI.md)**、
   [工具合約](./docs/TOOL_CONTRACT.md) ·
   [從 0.x 遷移](./docs/MIGRATING.md)
 
-## Star 趨勢
-
-<a href="https://www.star-history.com/?repos=naamfung%2FNix&type=date&legend=top-left">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/naamfung/Nix/star-history/assets/star-history/star-history-dark.svg" />
-   <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/naamfung/Nix/star-history/assets/star-history/star-history-light.svg" />
-   <img alt="Star History Chart" src="https://raw.githubusercontent.com/naamfung/Nix/star-history/assets/star-history/star-history-light.svg" />
- </picture>
-</a>
-
-<br/>
-
-## 致謝
-
-下面這些朋友的工作塑造了 Nix 今天的样子 —— 當前按 commit 數統計的前 20 名貢獻者。
-完整貢獻者列表在
-[GitHub](https://github.com/naamfung/Nix/graphs/contributors?all=1)。
-
-<!-- reasonix-top-contributors:start -->
-| Contributor | Contributor | Contributor | Contributor |
-| --- | --- | --- | --- |
-| [**SivanCola**](https://github.com/SivanCola) | [**esengine**](https://github.com/esengine) | [**ttmouse**](https://github.com/ttmouse) | [**lifu963**](https://github.com/lifu963) |
-| **reasonix**（anonymous） | [**HUQIANTAO**](https://github.com/HUQIANTAO) | [**GTC2080**](https://github.com/GTC2080) | [**light-front-theory**](https://github.com/light-front-theory) |
-| **merge-order-check**（anonymous） | [**Li-Charles-One**](https://github.com/Li-Charles-One) | [**eghrhegpe**](https://github.com/eghrhegpe) | **wufengfan**（anonymous） |
-| [**CVEngineer66**](https://github.com/CVEngineer66) | [**dependabot\[bot\]**](https://github.com/apps/dependabot) | [**lanshi17**](https://github.com/lanshi17) | [**SuMuxi66**](https://github.com/SuMuxi66) |
-| [**CnsMaple**](https://github.com/CnsMaple) | [**cyq1017**](https://github.com/cyq1017) | [**JesonChou**](https://github.com/JesonChou) | [**XTLine**](https://github.com/XTLine) |
-<!-- reasonix-top-contributors:end -->
-
-另外特別感謝 [**Bernardxu123**](https://github.com/Bernardxu123) 設計的項目 logo，
-以及 [AIGC Link](https://xhslink.com/m/80ngts127cA) 在小紅書上的推廣。
-
-<p align="center">
-  <a href="https://github.com/naamfung/Nix/graphs/contributors">
-    <img src="https://contrib.rocks/image?repo=naamfung/Nix&max=100&columns=12" alt="naamfung/Nix 貢獻者" width="860"/>
-  </a>
-</p>
-
-<br/>
-
 ---
 
 <p align="center">
   <sub>MIT —— 見 <a href="./LICENSE">LICENSE</a></sub>
-  <br/>
-  <sub>由 <a href="https://github.com/naamfung/Nix/graphs/contributors">naamfung/Nix</a> 社區共建</sub>
-</p>
-
----
-
-<p align="center"><sub><strong>支持本項目</strong></sub></p>
-
-如果 Nix 幫你省了時間或 token，歡迎請杯咖啡。捐助不會換來 feature
-優先級，也不會影響 issue 的處理順序——就是「謝謝」。
-
-- **國內** — 微信支付（掃二維碼）
-- **海外** — PayPal: [paypal.me/yuhuahui](https://paypal.me/yuhuahui)
-
-<p align="center">
-  <img src=".github/sponsor/wechat-pay.jpg" alt="微信支付收款碼" width="180"/>
 </p>
 
 ---

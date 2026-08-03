@@ -15,10 +15,8 @@
 </p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/nix"><img src="https://img.shields.io/npm/v/nix.svg?style=flat-square&color=cb3837&labelColor=161b22&logo=npm&logoColor=white" alt="npm version"/></a>
   <a href="https://github.com/naamfung/Nix/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/naamfung/Nix/ci.yml?style=flat-square&label=ci&labelColor=161b22&logo=githubactions&logoColor=white" alt="CI"/></a>
-  <a href="./LICENSE"><img src="https://img.shields.io/npm/l/nix.svg?style=flat-square&color=8b949e&labelColor=161b22" alt="license"/></a>
-  <a href="https://www.npmjs.com/package/nix"><img src="https://img.shields.io/npm/dm/nix.svg?style=flat-square&color=3fb950&labelColor=161b22&label=downloads" alt="downloads"/></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/github/license/naamfung/Nix.svg?style=flat-square&color=8b949e&labelColor=161b22" alt="license"/></a>
   <a href="https://github.com/naamfung/Nix/stargazers"><img src="https://img.shields.io/github/stars/naamfung/Nix.svg?style=flat-square&color=dbab09&labelColor=161b22&logo=github&logoColor=white" alt="GitHub stars"/></a>
   <a href="https://atomgit.com/naamfung/Nix"><img src="https://atomgit.com/naamfung/Nix/star/badge.svg" alt="AtomGit stars"/></a>
 </p>
@@ -45,21 +43,12 @@
 
 ## 安裝
 
-選擇適合你的使用路徑。CLI/TUI、桌面端和 VS Code 擴展都使用同一套本地
-Nix 引擎。
-
-### 路徑 A：CLI / TUI
-
-任意支持的平台都可以通過 npm 安裝原生二進制：
-
-```sh
-npm i -g nix                  # 任意系統;自動拉取對應平台的原生二進制
-```
+### 方式一：下載預編譯版本（桌面端 / CLI）
 
 預編譯歸檔(`darwin|linux|windows × amd64|arm64`)和 `SHA256SUMS` 見每個
 [GitHub release](https://github.com/naamfung/Nix/releases)。
 
-### 路徑 B：桌面端
+#### 桌面端
 
 前往[官方下載頁](https://github.com/naamfung/Nix/releases)獲取最新桌面版本。
 
@@ -72,16 +61,11 @@ npm i -g nix                  # 任意系統;自動拉取對應平台的原生�
 Windows 安裝器通過 [SignPath.io](https://signpath.io/) 完成代碼簽名，證書由
 [SignPath 基金會](https://signpath.org/) 免費提供。
 
-### 路徑 C：VS Code 擴展
+#### CLI / TUI
 
-請先完成路徑 A。擴展不內置 CLI，而是啟動本機的 `nix acp` 後端，
-並提供原生聊天、編輯器上下文、工具調用審批、模型選擇和工作區會話。
+預編譯二進制歸檔可於 [GitHub release](https://github.com/naamfung/Nix/releases) 下載。
 
-- **VS Code：** [從 Visual Studio Marketplace 安裝](https://marketplace.visualstudio.com/items?itemName=SivanLiu.nix-agent)
-- **VSCodium / Eclipse Theia：** [從 Open VSX Registry 安裝](https://open-vsx.org/extension/SivanLiu/nix-agent)
-- **擴展 ID：** `SivanLiu.nix-agent` · [源碼與使用說明](https://github.com/SivanCola/nix-vscode)
-
-### 路徑 D：從源碼構建
+### 方式二：從源碼構建
 
 ```sh
 git clone https://github.com/naamfung/Nix.git
@@ -94,7 +78,7 @@ make cross      # -> dist/（darwin|linux|windows × amd64|arm64）
 
 ### CLI / TUI
 
-以下命令僅適用於通過路徑 A 安裝的 CLI/TUI：
+安裝後可使用以下命令：
 
 ```sh
 nix setup                      # 配置 provider 和模型

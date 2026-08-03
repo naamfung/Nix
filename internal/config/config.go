@@ -103,7 +103,7 @@ func (c *Config) CLITelemetryConfigured() bool {
 // CLITelemetryMode returns the normalized CLI telemetry policy.
 func (c *Config) CLITelemetryMode() string {
 	if c == nil {
-		return "auto"
+		return "off"
 	}
 	switch strings.ToLower(strings.TrimSpace(c.Telemetry.CLIMetrics)) {
 	case "on":
@@ -111,7 +111,7 @@ func (c *Config) CLITelemetryMode() string {
 	case "off":
 		return "off"
 	default:
-		return "auto"
+		return "off"
 	}
 }
 
@@ -220,7 +220,7 @@ type DesktopConfig struct {
 	StatusBarStyle          string   `toml:"status_bar_style"`           // icon|text; desktop status bar metric labels
 	StatusBarItems          []string `toml:"status_bar_items"`           // ordered visible desktop status bar items
 	DefaultToolApprovalMode string   `toml:"default_tool_approval_mode"` // ask|auto|yolo; defaults to auto for newly-created desktop sessions
-	CheckUpdates            *bool    `toml:"check_updates"`              // startup update checks; nil keeps the default enabled
+	CheckUpdates            *bool    `toml:"check_updates"`              // startup update checks; nil keeps the default disabled
 	// UpdateChannel is a legacy compatibility field. It is accepted on read but
 	// ignored and omitted from future canonical writes.
 	UpdateChannel     string   `toml:"update_channel"`
@@ -529,10 +529,10 @@ func normalizeDesktopStatusBarItems(items []string) []string {
 }
 
 // DesktopCheckUpdates reports whether the desktop should check for updates on
-// startup. Missing configs default to true so existing users keep update notices.
+// startup. Missing configs default to false so existing users do not see update notices by default.
 func (c *Config) DesktopCheckUpdates() bool {
 	if c == nil || c.Desktop.CheckUpdates == nil {
-		return true
+		return false
 	}
 	return *c.Desktop.CheckUpdates
 }
@@ -628,16 +628,16 @@ func NormalizeReasoningLanguage(lang string) string {
 // It carries no conversation, key, or file data — see desktop/README.md.
 func (c *Config) DesktopTelemetry() bool {
 	if c == nil || c.Desktop.Telemetry == nil {
-		return true
+		return false
 	}
 	return *c.Desktop.Telemetry
 }
 
 // DesktopMetrics reports whether the desktop sends aggregate desktop metrics —
-// anonymous (signal, bucket) counters, never content. Default on.
+// anonymous (signal, bucket) counters, never content. Default off.
 func (c *Config) DesktopMetrics() bool {
 	if c == nil || c.Desktop.Metrics == nil {
-		return true
+		return false
 	}
 	return *c.Desktop.Metrics
 }

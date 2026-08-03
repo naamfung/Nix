@@ -153,9 +153,35 @@ func Run(args []string, version string) int {
 	case "bot":
 		configureCLIThemeFromConfig()
 		return botCommand(rest, version)
+	// =====================================================================
+	// UPGRADE/UPDATE COMMAND DISABLED FOR LOCAL FORK
+	// To re-enable the upgrade/update commands in the future:
+	// 1. Restore the `upgrade` and `update` command routing in this switch block:
+	//    - Uncomment the original:
+	//        case "upgrade", "update":
+	//            configureCLIThemeFromConfig()
+	//            return upgradeCommand(rest, version)
+	//    - Delete the error output code:
+	//        case "upgrade", "update":
+	//            fmt.Fprintln(os.Stderr, "error: upgrade/update command has been disabled in this local forked build.")
+	//            return 2
+	// 2. Restore `upgrade` and `update` in the `shouldMigrateLegacyConfigForCLI` function:
+	//    Change:
+	//        case "", "run", "chat", "code", "serve", "setup", "config", "init", "acp", "mcp", "remote", "plugin", "subagent", "doctor", "bot":
+	//    Back to:
+	//        case "", "run", "chat", "code", "serve", "setup", "config", "init", "acp", "mcp", "remote", "plugin", "subagent", "doctor", "bot", "upgrade", "update":
+	// 3. Update the GitHub repository URLs in `internal/cli/upgrade.go` (lines 32-36) to your upstream address:
+	//    ghOwner = "your-org"
+	//    ghRepo  = "your-repo"
+	//    ghAPIReleases          = "https://api.github.com/repos/" + ghOwner + "/" + ghRepo + "/releases?per_page=100"
+	//    ghDownloadBase         = "https://github.com/" + ghOwner + "/" + ghRepo + "/releases/download"
+	// =====================================================================
+	// case "upgrade", "update":
+	//	configureCLIThemeFromConfig()
+	//	return upgradeCommand(rest, version)
 	case "upgrade", "update":
-		configureCLIThemeFromConfig()
-		return upgradeCommand(rest, version)
+		fmt.Fprintln(os.Stderr, "error: upgrade/update command has been disabled in this local forked build.")
+		return 2
 	case "version", "--version", "-v":
 		fmt.Println("reasonix", version)
 		return 0
@@ -186,7 +212,7 @@ func isDefaultInteractiveFlag(arg string) bool {
 
 func shouldMigrateLegacyConfigForCLI(cmd string) bool {
 	switch cmd {
-	case "", "run", "chat", "code", "serve", "setup", "config", "init", "acp", "mcp", "remote", "plugin", "subagent", "doctor", "bot", "upgrade", "update":
+	case "", "run", "chat", "code", "serve", "setup", "config", "init", "acp", "mcp", "remote", "plugin", "subagent", "doctor", "bot":
 		return true
 	default:
 		return false

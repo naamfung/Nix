@@ -69,7 +69,7 @@ func renderTurnReceipt(u *provider.Usage, p *provider.Pricing, d *event.CacheDia
 	if u.ReasoningTokens > 0 {
 		groups = append(groups, "reasoning "+shortTokens(u.ReasoningTokens))
 	}
-	if p != nil {
+	if p != nil && p.Cost(u) > 0 {
 		groups = append(groups, fmt.Sprintf("%s%.4f", p.Symbol(), p.Cost(u)))
 	}
 
@@ -78,7 +78,7 @@ func renderTurnReceipt(u *provider.Usage, p *provider.Pricing, d *event.CacheDia
 	for _, group := range groups {
 		styled = append(styled, footerValue(group))
 	}
-	receipt := statusFooterIndent + footerLabel(i18n.M.ChatTurnReceiptLabel) + "  " + strings.Join(styled, separator)
+	receipt := footerHint("✻") + "  " + footerLabel(i18n.M.ChatTurnReceiptLabel) + " " + strings.Join(styled, separator)
 	if d != nil && d.PrefixChanged {
 		reasons := strings.Join(d.PrefixChangeReasons, "+")
 		if reasons == "" {

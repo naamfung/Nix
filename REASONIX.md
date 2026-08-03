@@ -33,9 +33,9 @@ agent. It is the Reasonix analog of Claude Code's CLAUDE.md.
 
 ## Notes
 
-## Pre-push CI simulation and rules
+## 推送之前的規則約束
 
-This section is meaningful as pre-push rules. When pushing (especially for AI operations), you must run this flow beforehand to standardize the code:
+這部份內容作為推送之前的規則約束。譬如 AI 操作推送時，得預先按這流程執行一次，以規範代碼：
 
 ```bash
 gofmt -w .                          # catches gofmt (saves ~13s CI)

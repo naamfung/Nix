@@ -363,7 +363,7 @@ func (s Shell) argv(command string) []string {
 		path = s.Kind.String()
 	}
 	if s.Kind == ShellPowerShell {
-		return []string{path, "-NoProfile", "-NonInteractive", "-Command", PowerShellUTF8Script(normalizeNullRedirects(command, "$null"))}
+		return []string{path, "-NoProfile", "-NonInteractive", "-WindowStyle", "Hidden", "-Command", PowerShellUTF8Script(normalizeNullRedirects(command, "$null"))}
 	}
 	return []string{path, "-c", normalizeNullRedirects(command, "/dev/null")}
 }

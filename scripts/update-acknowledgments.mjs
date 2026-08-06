@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { readFile, writeFile } from 'node:fs/promises';
 
-const repo = 'esengine/DeepSeek-Inx';
+const repo = 'naamfung/inx';
 const api = `https://api.github.com/repos/${repo}/contributors?per_page=20&anon=1`;
 const startMarker = '<!-- inx-top-contributors:start -->';
 const endMarker = '<!-- inx-top-contributors:end -->';

@@ -12,7 +12,7 @@ const { release, releases, canonical } = Astro.props as {
   canonical?: string;
 };
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
-const repo = 'https://github.com/esengine/DeepSeek-Inx';
+const repo = 'https://github.com/naamfung/inx';
 const prHref = (ref: number) => `${repo}/pull/${ref}`;
 
 /* A title that is exactly the version string ("Inx 1.17.14") means a

@@ -119,5 +119,5 @@ CLI 進階用法和詳細配置見 **[CLI 命令參考](./docs/CLI.md)**、
 ---
 
 <p align="center">
-  <sub>This project is based on <strong>INX</strong>. See the upstream repository at <a href="https://github.com/esengine/DeepSeek-Inx">esengine/DeepSeek-Inx</a>.</sub>
+  <sub>This project is based on <strong>Reasonix</strong>. See the upstream repository at <a href="https://github.com/esengine/DeepSeek-Reasonix">esengine/DeepSeek-Reasonix</a>.</sub>
 </p>

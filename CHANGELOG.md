@@ -166,4 +166,4 @@ TypeScript line; a new codebase that becomes the default (`main-v2`).
   support for the fetched runtime is unverified — install `codegraph` on PATH if
   the auto-fetch doesn't resolve there.
 
-[1.0.0]: https://github.com/esengine/DeepSeek-Inx/releases/tag/v1.0.0
+[1.0.0]: https://github.com/esengine/DeepSeek-Reasonix/releases/tag/v1.0.0

@@ -9,7 +9,7 @@ Inx 1.0 是一次从零开始的 **Go 重写**。它使用全新的代码库，�
 | | 旧版（v1） | Inx 1.0+（v2） |
 | --- | --- | --- |
 | 语言 | TypeScript / Node.js | Go |
-| 分支 | [`v1`](https://github.com/esengine/DeepSeek-Inx/tree/v1)（仅维护） | `main-v2`（默认、活跃开发） |
+| 分支 | [`v1`](https://github.com/esengine/DeepSeek-Reasonix/tree/v1)（仅维护） | `main-v2`（默认、活跃开发） |
 | 版本 | `0.x`（最高 v0.54.x） | `1.0.0`+ |
 | 安装 | `npm i -g inx@0.53.2`（固定到某个 `0.x` 版本） | `npm i -g inx`；也可使用 release 归档或源码构建 |
 | 代码智能 | embedding 语义搜索 + tree-sitter 符号索引 | LSP 辅助代码读取，以及 grep/read_file/glob；语义索引尚未移植 |
@@ -32,8 +32,8 @@ npm i -g inx@0.53.2   # 固定到旧版 TypeScript 构建
 也可以从源码构建：
 
 ```sh
-git clone https://github.com/esengine/DeepSeek-Inx   # 默认分支 main-v2（Go）
-cd DeepSeek-Inx && make build                        # -> bin/inx(.exe)
+git clone https://github.com/esengine/DeepSeek-Reasonix   # 默认分支 main-v2（Go）
+cd DeepSeek-Reasonix && make build                        # -> bin/inx(.exe)
 ```
 
 ## 配置
@@ -135,4 +135,4 @@ Inx 1.0 支持读取和编辑 UTF-8、UTF-8 BOM、UTF-16 LE/BE 与 GB18030（GBK
 
 Issue 和 PR 按代码线标记：**`v1`** 表示旧 TypeScript 版，**`v2`** 表示 Go 版。请按实际使用版本提交报告。旧 `v1` 线处于维护模式，只接收 bug 修复，不再新增功能。
 
-如有问题，请发起 [Discussion](https://github.com/esengine/DeepSeek-Inx/discussions)。
+如有问题，请发起 [Discussion](https://github.com/esengine/DeepSeek-Reasonix/discussions)。

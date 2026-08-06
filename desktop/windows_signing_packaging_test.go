@@ -77,7 +77,7 @@ func TestWindowsReleaseSignsPayloadBeforeRepackaging(t *testing.T) {
 		`artifact-configuration-slug: windows-installer-v2`,
 		`path: desktop/build/windows/signing-payload/*.exe`,
 		`path: desktop/build/windows/installer-signing-bundle/*.exe`,
-		`github.repository == 'esengine/DeepSeek-Inx'`,
+		`github.repository == 'naamfung/inx'`,
 		`SIGNPATH_API_TOKEN is required for public Windows Preview and Stable releases`,
 		`SIGNPATH_RELEASE_SIGNING_ATTESTATION does not match the current protected signing contract`,
 		`signing-policy-slug: release-signing`,

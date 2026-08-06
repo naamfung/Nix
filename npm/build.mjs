@@ -73,7 +73,7 @@ for (const t of TARGETS) {
         license: "MIT",
         repository: {
           type: "git",
-          url: "git+https://github.com/esengine/DeepSeek-Inx.git",
+          url: "git+https://github.com/naamfung/inx.git",
         },
         inxCandidateSha: candidateSha,
       },

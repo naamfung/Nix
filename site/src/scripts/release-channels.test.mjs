@@ -17,7 +17,7 @@ function cliAssets(tag, missing = []) {
   const skip = new Set(missing);
   return CLI_RELEASE_ASSETS.filter((name) => !skip.has(name)).map((name) => ({
     name,
-    browser_download_url: `https://github.com/esengine/DeepSeek-Inx/releases/download/${tag}/${name}`,
+    browser_download_url: `https://github.com/naamfung/inx/releases/download/${tag}/${name}`,
     size: 42,
   }));
 }
@@ -68,7 +68,7 @@ function desktopGitHubRelease(version = "v1.17.21") {
     prerelease: false,
     assets: names.map((name) => ({
       name,
-      browser_download_url: `https://github.com/esengine/DeepSeek-Inx/releases/download/${tag}/${name}`,
+      browser_download_url: `https://github.com/naamfung/inx/releases/download/${tag}/${name}`,
       size: 42,
     })),
   };
@@ -138,7 +138,7 @@ test("CLI selection rejects incomplete releases instead of synthesizing asset UR
   assert.equal(model?.displayVersion, "1.19.5");
   assert.equal(
     model?.assets["inx-windows-arm64.zip"],
-    "https://github.com/esengine/DeepSeek-Inx/releases/download/v1.19.5/inx-windows-arm64.zip",
+    "https://github.com/naamfung/inx/releases/download/v1.19.5/inx-windows-arm64.zip",
   );
   assert.equal(cliReleaseModel([releases[0]], "stable"), null);
 });
@@ -168,7 +168,7 @@ test("CLI release links are derived from the validated canonical tag", () => {
   };
   assert.equal(
     cliReleaseModel([release], "stable")?.releaseURL,
-    "https://github.com/esengine/DeepSeek-Inx/releases/tag/v1.18.0",
+    "https://github.com/naamfung/inx/releases/tag/v1.18.0",
   );
   assert.equal(
     cliReleaseModel([release], "stable")?.changelogURL,
@@ -185,11 +185,11 @@ test("CLI assets reject spoofed hosts and cross-tag URLs", () => {
     assets: cliAssets("v1.18.0"),
   };
   const invalidURLs = [
-    "https://evil.invalid/esengine/DeepSeek-Inx/releases/download/v1.20.0/inx-darwin-amd64.tar.gz",
-    "https://github.com@evil.invalid/esengine/DeepSeek-Inx/releases/download/v1.20.0/inx-darwin-amd64.tar.gz",
-    "http://github.com/esengine/DeepSeek-Inx/releases/download/v1.20.0/inx-darwin-amd64.tar.gz",
-    "https://github.com/esengine/DeepSeek-Inx/releases/download/v1.19.0/inx-darwin-amd64.tar.gz",
-    "https://github.com/esengine/DeepSeek-Inx/releases/download/v1.20.0/inx-darwin-arm64.tar.gz",
+    "https://evil.invalid/naamfung/inx/releases/download/v1.20.0/inx-darwin-amd64.tar.gz",
+    "https://github.com@evil.invalid/naamfung/inx/releases/download/v1.20.0/inx-darwin-amd64.tar.gz",
+    "http://github.com/naamfung/inx/releases/download/v1.20.0/inx-darwin-amd64.tar.gz",
+    "https://github.com/naamfung/inx/releases/download/v1.19.0/inx-darwin-amd64.tar.gz",
+    "https://github.com/naamfung/inx/releases/download/v1.20.0/inx-darwin-arm64.tar.gz",
   ];
   const invalid = invalidURLs.map((browser_download_url) => {
     const release = {
@@ -233,13 +233,13 @@ test("Desktop manifests accept only official versions and old or unified asset b
   const stableR2 = desktopManifest("v1.18.0");
   assert.equal(desktopReleaseModel(stableR2, "stable")?.version, "v1.18.0");
   const githubBase =
-    "https://github.com/esengine/DeepSeek-Inx/releases/download/desktop-v1.18.0/";
+    "https://github.com/naamfung/inx/releases/download/desktop-v1.18.0/";
   const stableGitHub = desktopManifest("v1.18.0", githubBase);
   assert.equal(
     desktopReleaseModel(stableGitHub, "stable")?.assets["Inx-linux-amd64.deb"],
     `${githubBase}Inx-linux-amd64.deb`,
   );
-  const unifiedBase = "https://github.com/esengine/DeepSeek-Inx/releases/download/v1.18.0/";
+  const unifiedBase = "https://github.com/naamfung/inx/releases/download/v1.18.0/";
   assert.equal(desktopReleaseModel(desktopManifest("v1.18.0", unifiedBase))?.assets["Inx-linux-amd64.deb"], `${unifiedBase}Inx-linux-amd64.deb`);
 });
 
@@ -316,7 +316,7 @@ test("Desktop Stable falls back to a complete exact GitHub Latest release", () =
   assert.equal(model?.version, "v1.17.21");
   assert.equal(
     model?.assets["Inx-darwin-universal.dmg"],
-    "https://github.com/esengine/DeepSeek-Inx/releases/download/desktop-v1.17.21/Inx-darwin-universal.dmg",
+    "https://github.com/naamfung/inx/releases/download/desktop-v1.17.21/Inx-darwin-universal.dmg",
   );
 
   const invalid = [
@@ -327,7 +327,7 @@ test("Desktop Stable falls back to a complete exact GitHub Latest release", () =
   ];
   const spoofed = copy(release);
   spoofed.assets[0].browser_download_url =
-    "https://github.com.evil.invalid/esengine/DeepSeek-Inx/releases/download/desktop-v1.17.21/Inx-darwin-arm64.zip";
+    "https://github.com.evil.invalid/naamfung/inx/releases/download/desktop-v1.17.21/Inx-darwin-arm64.zip";
   invalid.push(spoofed);
   for (const candidate of invalid) assert.equal(desktopGitHubReleaseModel(candidate), null);
 });

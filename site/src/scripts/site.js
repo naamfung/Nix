@@ -238,7 +238,7 @@ import { initTheme } from "./theme.js";
 
   /* public official releases */
   const releaseModels = { desktop: null, cli: null };
-  const releasesPage = "https://github.com/esengine/DeepSeek-Inx/releases";
+  const releasesPage = "https://github.com/naamfung/inx/releases";
   const reflectPaneURL = (surface) => {
     const nextURL = downloadURLForPane(window.location.href, surface, "");
     if (nextURL) window.history.replaceState(null, "", nextURL);
@@ -296,7 +296,7 @@ import { initTheme } from "./theme.js";
   ], fetch, (manifest) => Boolean(desktopReleaseModel(manifest)))
     .then((manifest) => desktopReleaseModel(manifest))
     .catch(() => fetchFirstJSON(
-      ["https://api.github.com/repos/esengine/DeepSeek-Inx/releases/latest"],
+      ["https://api.github.com/repos/naamfung/inx/releases/latest"],
       fetch,
       (release) => Boolean(desktopGitHubReleaseModel(release)),
     ).then(desktopGitHubReleaseModel))
@@ -310,7 +310,7 @@ import { initTheme } from "./theme.js";
   let githubCLIReleases;
   const fallbackCLIReleases = () => {
     githubCLIReleases ??= fetchFirstJSON([
-      "https://api.github.com/repos/esengine/DeepSeek-Inx/releases?per_page=100",
+      "https://api.github.com/repos/naamfung/inx/releases?per_page=100",
     ]).catch(() => null);
     return githubCLIReleases;
   };

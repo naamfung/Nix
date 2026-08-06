@@ -578,7 +578,7 @@ func TestDesktopManifestValidation(t *testing.T) {
 	t.Run("unified GitHub release base", func(t *testing.T) {
 		manifest := validDesktopManifest(t, "stable", "v1.19.0")
 		oldBase := r2Base + "/desktop-v1.19.0/"
-		newBase := "https://github.com/esengine/DeepSeek-Inx/releases/download/v1.19.0/"
+		newBase := "https://github.com/naamfung/inx/releases/download/v1.19.0/"
 		for key, asset := range manifest.Platforms {
 			asset.URL = strings.Replace(asset.URL, oldBase, newBase, 1)
 			asset.Sig = asset.URL + ".minisig"
@@ -624,7 +624,7 @@ func TestDesktopManifestValidation(t *testing.T) {
 		asset.URL = strings.Replace(
 			asset.URL,
 			r2Base+"/desktop-v1.18.0/",
-			"https://github.com/esengine/DeepSeek-Inx/releases/download/desktop-v1.18.0/",
+			"https://github.com/naamfung/inx/releases/download/desktop-v1.18.0/",
 			1,
 		)
 		asset.Sig = asset.URL + ".minisig"

@@ -35,7 +35,7 @@ If repository policy prevents Actions from opening the Notes PR, the workflow
 still pushes `release-notes/vX.Y.Z` and prints this recoverable handoff:
 
 ```sh
-gh pr create --repo esengine/DeepSeek-Inx \
+gh pr create --repo naamfung/inx \
   --base main-v2 --head release-notes/vX.Y.Z --fill
 ```
 

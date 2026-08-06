@@ -1176,26 +1176,26 @@ func TestSetReasoningLanguageRejectsBackgroundJobsBeforeSavingConfig(t *testing.
 	}
 }
 
-func TestSetDesktopCheckUpdatesPersistsToUserConfig(t *testing.T) {
+func TestSetDesktopCheckUpdatesDefaultsOffAndPersistsOn(t *testing.T) {
 	isolateDesktopUserDirs(t)
 
 	app := NewApp()
-	if !app.Settings().CheckUpdates {
-		t.Fatal("Settings().CheckUpdates default = false, want true")
+	if app.Settings().CheckUpdates {
+		t.Fatal("Settings().CheckUpdates default = true, want false (fork: no outbound requests)")
 	}
-	if err := app.SetDesktopCheckUpdates(false); err != nil {
+	if err := app.SetDesktopCheckUpdates(true); err != nil {
 		t.Fatalf("SetDesktopCheckUpdates: %v", err)
 	}
 	view := app.Settings()
-	if view.CheckUpdates {
-		t.Fatal("Settings().CheckUpdates = true, want false")
+	if !view.CheckUpdates {
+		t.Fatal("Settings().CheckUpdates = false, want true")
 	}
 	cfg := config.LoadForEdit(config.UserConfigPath())
-	if cfg.Desktop.CheckUpdates == nil || *cfg.Desktop.CheckUpdates {
-		t.Fatalf("desktop.check_updates = %+v, want false", cfg.Desktop.CheckUpdates)
+	if cfg.Desktop.CheckUpdates == nil || !*cfg.Desktop.CheckUpdates {
+		t.Fatalf("desktop.check_updates = %+v, want true", cfg.Desktop.CheckUpdates)
 	}
-	if cfg.DesktopCheckUpdates() {
-		t.Fatal("DesktopCheckUpdates() = true, want false")
+	if !cfg.DesktopCheckUpdates() {
+		t.Fatal("DesktopCheckUpdates() = false, want true")
 	}
 }
 
@@ -1304,26 +1304,26 @@ func TestRetiredAutoRecoveryCheckpointSettingsAreNoOps(t *testing.T) {
 	}
 }
 
-func TestSetDesktopMetricsDefaultsOnAndPersistsOff(t *testing.T) {
+func TestSetDesktopMetricsDefaultsOffAndPersistsOn(t *testing.T) {
 	isolateDesktopUserDirs(t)
 
 	app := NewApp()
-	if !app.Settings().Metrics {
-		t.Fatal("Settings().Metrics default = false, want true")
+	if app.Settings().Metrics {
+		t.Fatal("Settings().Metrics default = true, want false (fork: no outbound requests)")
 	}
-	if err := app.SetDesktopMetrics(false); err != nil {
+	if err := app.SetDesktopMetrics(true); err != nil {
 		t.Fatalf("SetDesktopMetrics: %v", err)
 	}
 	view := app.Settings()
-	if view.Metrics {
-		t.Fatal("Settings().Metrics = true, want false")
+	if !view.Metrics {
+		t.Fatal("Settings().Metrics = false, want true")
 	}
 	cfg := config.LoadForEdit(config.UserConfigPath())
-	if cfg.Desktop.Metrics == nil || *cfg.Desktop.Metrics {
-		t.Fatalf("desktop.metrics = %+v, want false", cfg.Desktop.Metrics)
+	if cfg.Desktop.Metrics == nil || !*cfg.Desktop.Metrics {
+		t.Fatalf("desktop.metrics = %+v, want true", cfg.Desktop.Metrics)
 	}
-	if cfg.DesktopMetrics() {
-		t.Fatal("DesktopMetrics() = true, want false")
+	if !cfg.DesktopMetrics() {
+		t.Fatal("DesktopMetrics() = false, want true")
 	}
 }
 

@@ -13,7 +13,7 @@ bounds.
 
 The diagnosis and upstream implementation are documented in:
 
-- https://github.com/esengine/DeepSeek-Inx/issues/5862
+- https://github.com/esengine/DeepSeek-Reasonix/issues/5862
 - https://github.com/wailsapp/wails/issues/5544
 - https://github.com/wailsapp/wails/pull/5734
 

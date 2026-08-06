@@ -213,7 +213,7 @@ func signFiles(files []string) error {
 func genManifest(dir, version, tag string, notesVersions ...string) error {
 	repo := os.Getenv("GITHUB_REPOSITORY")
 	if repo == "" || repo == "esengine/inx" {
-		repo = "esengine/DeepSeek-Inx"
+		repo = "naamfung/inx"
 	}
 	notesVersion := version
 	if len(notesVersions) > 1 {

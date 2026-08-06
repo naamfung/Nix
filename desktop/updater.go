@@ -90,7 +90,7 @@ var (
 // own the repo-wide latest badge and publish latest.json directly, while
 // The unified official Release carries the desktop manifest as a final fallback
 // when both first-party endpoints are unavailable.
-const githubManifestFallback = "https://github.com/esengine/DeepSeek-Inx/releases/latest/download/latest.json"
+const githubManifestFallback = "https://github.com/naamfung/inx/releases/latest/download/latest.json"
 
 func normalizeUpdateChannel(ch string) string {
 	return config.NormalizeDesktopUpdateChannel(ch)
@@ -309,8 +309,8 @@ func desktopAssetBases(selected, version string, allowLegacyPreview bool) []stri
 	tag := desktopReleaseTag(selected, version)
 	return []string{
 		fmt.Sprintf("%s/%s/", r2Base, tag),
-		fmt.Sprintf("https://github.com/esengine/DeepSeek-Inx/releases/download/%s/", tag),
-		fmt.Sprintf("https://github.com/esengine/DeepSeek-Inx/releases/download/%s/", version),
+		fmt.Sprintf("https://github.com/naamfung/inx/releases/download/%s/", tag),
+		fmt.Sprintf("https://github.com/naamfung/inx/releases/download/%s/", version),
 	}
 }
 

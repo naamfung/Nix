@@ -27,7 +27,7 @@ func TestDefaultDesktopAppearanceAutoGraphite(t *testing.T) {
 func TestDefaultDesktopMetricsOff(t *testing.T) {
 	cfg := Default()
 	if cfg.DesktopMetrics() {
-		t.Fatal("default desktop metrics = true, want false (Default off)")
+		t.Fatal("default desktop metrics = true, want false (fork: no outbound requests)")
 	}
 	enabled := true
 	cfg.Desktop.Metrics = &enabled

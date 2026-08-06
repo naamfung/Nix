@@ -81,7 +81,7 @@ function safeHTTPSURL(value) {
 function expectedCLIAssetURL(value, tag, name) {
   if (typeof value !== "string") return null;
   const url = safeHTTPSURL(value);
-  const path = `/esengine/DeepSeek-Inx/releases/download/${tag}/${name}`;
+  const path = `/naamfung/inx/releases/download/${tag}/${name}`;
   return url &&
     url.href === value &&
     url.hostname.toLowerCase() === "github.com" &&
@@ -148,7 +148,7 @@ export function cliReleaseModel(releases, requestedChannel) {
   if (!parsed) return null;
   const assets = releaseAssetMap(release);
   if (!assets) return null;
-  const releaseURL = `https://github.com/esengine/DeepSeek-Inx/releases/tag/${parsed.tag}`;
+  const releaseURL = `https://github.com/naamfung/inx/releases/tag/${parsed.tag}`;
   const exactChangelogURL = `https://inx.io/changelog/${parsed.tag}/`;
   const changelogURL = release.release_notes_url === exactChangelogURL
     ? exactChangelogURL
@@ -167,8 +167,8 @@ function desktopAssetBases(parsed) {
   const tag = `desktop-${parsed.tag}`;
   return [
     `https://dl.inx.io/${tag}/`,
-    `https://github.com/esengine/DeepSeek-Inx/releases/download/${tag}/`,
-    `https://github.com/esengine/DeepSeek-Inx/releases/download/${parsed.tag}/`,
+    `https://github.com/naamfung/inx/releases/download/${tag}/`,
+    `https://github.com/naamfung/inx/releases/download/${parsed.tag}/`,
   ];
 }
 
@@ -253,7 +253,7 @@ export function desktopGitHubReleaseModel(release) {
     seen.add(name);
     const rawURL = typeof asset?.browser_download_url === "string" ? asset.browser_download_url : "";
     const url = safeHTTPSURL(rawURL);
-    const expected = `https://github.com/esengine/DeepSeek-Inx/releases/download/${tag}/${name}`;
+    const expected = `https://github.com/naamfung/inx/releases/download/${tag}/${name}`;
     if (
       !url ||
       url.href !== rawURL ||

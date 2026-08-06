@@ -76,8 +76,8 @@ test("managed Preview records bind every surface to one exact ordinal", () => {
     risks: [],
     contributors: [],
     links: {
-      github: "https://github.com/esengine/DeepSeek-Inx/releases/tag/v1.19.0-preview.3",
-      compare: "https://github.com/esengine/DeepSeek-Inx/compare/v1.19.0-preview.2...v1.19.0-preview.3",
+      github: "https://github.com/naamfung/inx/releases/tag/v1.19.0-preview.3",
+      compare: "https://github.com/naamfung/inx/compare/v1.19.0-preview.2...v1.19.0-preview.3",
       download: "https://inx.io/?download=desktop&channel=preview#start",
     },
   };

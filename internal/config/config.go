@@ -223,12 +223,12 @@ type DesktopConfig struct {
 	StatusBarStyle          string   `toml:"status_bar_style"`           // icon|text; desktop status bar metric labels
 	StatusBarItems          []string `toml:"status_bar_items"`           // ordered visible desktop status bar items
 	DefaultToolApprovalMode string   `toml:"default_tool_approval_mode"` // ask|auto|yolo; defaults to auto for newly-created desktop sessions
-	CheckUpdates            *bool    `toml:"check_updates"`              // startup update checks; nil keeps the default disabled
+	CheckUpdates            *bool    `toml:"check_updates"`              // startup update checks; nil keeps the default disabled (fork: no outbound requests)
 	// UpdateChannel is a legacy compatibility field. It is accepted on read but
 	// ignored and omitted from future canonical writes.
 	UpdateChannel     string   `toml:"update_channel"`
-	Telemetry         *bool    `toml:"telemetry"`          // anonymous launch ping plus scrubbed next-launch native crash diagnostics; nil keeps the default enabled
-	Metrics           *bool    `toml:"metrics"`            // aggregate desktop metrics (anonymous signal/bucket counts, including lifecycle health; no content); nil keeps the default enabled
+	Telemetry         *bool    `toml:"telemetry"`          // anonymous launch ping plus scrubbed next-launch native crash diagnostics; nil keeps the default disabled (fork: no outbound requests)
+	Metrics           *bool    `toml:"metrics"`            // aggregate desktop metrics (anonymous signal/bucket counts, including lifecycle health; no content); nil keeps the default disabled (fork: no outbound requests)
 	ProviderAccess    []string `toml:"provider_access"`    // desktop-only list of provider entries shown in Settings > Model > Access
 	ExpandThinking    bool     `toml:"expand_thinking"`    // true = show reasoning text expanded by default; false = collapsed
 	ConversationWidth string   `toml:"conversation_width"` // standard|full; max transcript width; empty = standard
@@ -532,7 +532,8 @@ func normalizeDesktopStatusBarItems(items []string) []string {
 }
 
 // DesktopCheckUpdates reports whether the desktop should check for updates on
-// startup. Missing configs default to false so existing users do not see update notices by default.
+// startup. This fork defaults to disabled: the branch targets local model
+// service and intentionally avoids outbound requests unless the user opts in.
 func (c *Config) DesktopCheckUpdates() bool {
 	if c == nil || c.Desktop.CheckUpdates == nil {
 		return false
@@ -637,7 +638,8 @@ func (c *Config) DesktopTelemetry() bool {
 }
 
 // DesktopMetrics reports whether the desktop sends aggregate desktop metrics —
-// anonymous (signal, bucket) counters, never content. Default off.
+// anonymous (signal, bucket) counters, never content. This fork defaults to
+// disabled (no outbound requests); explicit opt-in persists a true value.
 func (c *Config) DesktopMetrics() bool {
 	if c == nil || c.Desktop.Metrics == nil {
 		return false

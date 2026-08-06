@@ -48,7 +48,7 @@ function githubDesktopRelease(version: string, overrides: Record<string, unknown
     assets: [{
       name: "latest.json",
       browser_download_url:
-        `https://github.com/esengine/DeepSeek-Inx/releases/download/${tag}/latest.json`,
+        `https://github.com/naamfung/inx/releases/download/${tag}/latest.json`,
       size: 42,
     }],
     ...overrides,
@@ -68,10 +68,10 @@ const cliAssets = [
 const cliRelease = (tag: string, prerelease: boolean) => ({
   tag_name: tag,
   prerelease,
-  html_url: `https://github.com/esengine/DeepSeek-Inx/releases/tag/${tag}`,
+  html_url: `https://github.com/naamfung/inx/releases/tag/${tag}`,
   assets: cliAssets.map((name) => ({
     name,
-    browser_download_url: `https://github.com/esengine/DeepSeek-Inx/releases/download/${tag}/${name}`,
+    browser_download_url: `https://github.com/naamfung/inx/releases/download/${tag}/${name}`,
     size: 42,
   })),
 });
@@ -278,7 +278,7 @@ describe("desktop Stable GitHub fallback", () => {
 
   it("uses /releases/latest and requires the release tag to match the manifest version", async () => {
     const githubBase =
-      "https://github.com/esengine/DeepSeek-Inx/releases/download/desktop-v1.18.0/";
+      "https://github.com/naamfung/inx/releases/download/desktop-v1.18.0/";
     const invalidR2 = desktopManifest("v1.19.0");
     invalidR2.platforms["darwin-arm64"].size = 0;
     const fetchMock = vi
@@ -296,14 +296,14 @@ describe("desktop Stable GitHub fallback", () => {
     expect(response.headers.get("x-inx-release-source")).toBe("github-desktop-release");
     expect(fetchMock.mock.calls.map((call) => call[0])).toEqual([
       "https://dl.inx.io/latest/latest.json",
-      "https://api.github.com/repos/esengine/DeepSeek-Inx/releases/latest",
+      "https://api.github.com/repos/naamfung/inx/releases/latest",
       `${githubBase}latest.json`,
     ]);
   });
 
   it("rejects a GitHub manifest whose version disagrees with the latest release tag", async () => {
     const manifestBase =
-      "https://github.com/esengine/DeepSeek-Inx/releases/download/desktop-v1.17.9/";
+      "https://github.com/naamfung/inx/releases/download/desktop-v1.17.9/";
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(new Response("missing", { status: 404 }))
@@ -322,13 +322,13 @@ describe("desktop Stable GitHub fallback", () => {
       {
         name: "latest.json",
         browser_download_url:
-          "https://evil.invalid/esengine/DeepSeek-Inx/releases/download/desktop-v1.18.0/latest.json",
+          "https://evil.invalid/naamfung/inx/releases/download/desktop-v1.18.0/latest.json",
         size: 42,
       },
       {
         name: "latest.json",
         browser_download_url:
-          "https://github.com/esengine/DeepSeek-Inx/releases/download/desktop-v1.18.0/latest.json",
+          "https://github.com/naamfung/inx/releases/download/desktop-v1.18.0/latest.json",
         size: 0,
       },
     ]) {
@@ -442,7 +442,7 @@ describe("CLI public release gateway", () => {
     const body = await response.json() as { html_url?: string };
 
     expect(body.html_url).toBe(
-      "https://github.com/esengine/DeepSeek-Inx/releases/tag/v1.18.0",
+      "https://github.com/naamfung/inx/releases/tag/v1.18.0",
     );
   });
 
@@ -472,11 +472,11 @@ describe("CLI public release gateway", () => {
 
   it("requires every CLI asset URL to be canonical", async () => {
     const invalidURLs = [
-      "https://evil.invalid/esengine/DeepSeek-Inx/releases/download/v1.20.0/inx-darwin-amd64.tar.gz",
-      "https://github.com@evil.invalid/esengine/DeepSeek-Inx/releases/download/v1.20.0/inx-darwin-amd64.tar.gz",
-      "http://github.com/esengine/DeepSeek-Inx/releases/download/v1.20.0/inx-darwin-amd64.tar.gz",
-      "https://github.com/esengine/DeepSeek-Inx/releases/download/v1.19.0/inx-darwin-amd64.tar.gz",
-      "https://github.com/esengine/DeepSeek-Inx/releases/download/v1.20.0/inx-darwin-arm64.tar.gz",
+      "https://evil.invalid/naamfung/inx/releases/download/v1.20.0/inx-darwin-amd64.tar.gz",
+      "https://github.com@evil.invalid/naamfung/inx/releases/download/v1.20.0/inx-darwin-amd64.tar.gz",
+      "http://github.com/naamfung/inx/releases/download/v1.20.0/inx-darwin-amd64.tar.gz",
+      "https://github.com/naamfung/inx/releases/download/v1.19.0/inx-darwin-amd64.tar.gz",
+      "https://github.com/naamfung/inx/releases/download/v1.20.0/inx-darwin-arm64.tar.gz",
     ];
 
     for (const browserDownloadURL of invalidURLs) {

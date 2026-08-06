@@ -9,7 +9,7 @@ changed and how to move over.
 | | Legacy (v1) | Inx 1.0+ (v2) |
 |---|---|---|
 | Language | TypeScript / Node | Go |
-| Branch | [`v1`](https://github.com/esengine/DeepSeek-Inx/tree/v1) (maintenance only) | `main-v2` (default, active) |
+| Branch | [`v1`](https://github.com/esengine/DeepSeek-Reasonix/tree/v1) (maintenance only) | `main-v2` (default, active) |
 | Versions | `0.x` (up to v0.54.x) | `1.0.0`+ |
 | Install | `npm i -g inx@0.53.2` (pin a `0.x` version) | `npm i -g inx` — `latest` points at the current official `1.x` release; or a release archive / `go build` |
 | Code intelligence | embedding semantic search + tree-sitter symbols | LSP-assisted code reading plus grep/read_file/glob; semantic index is not yet ported |
@@ -43,8 +43,8 @@ your shell alongside a `1.x` desktop app is expected, not a conflict. Or build
 from source:
 
 ```sh
-git clone https://github.com/esengine/DeepSeek-Inx   # default: main-v2 (Go)
-cd DeepSeek-Inx && make build                        # -> bin/inx(.exe)
+git clone https://github.com/esengine/DeepSeek-Reasonix   # default: main-v2 (Go)
+cd DeepSeek-Reasonix && make build                        # -> bin/inx(.exe)
 ```
 
 ## Configuration
@@ -205,4 +205,4 @@ Issues and PRs are labelled by line: **`v1`** (legacy TypeScript) and **`v2`**
 (Go). File new reports against the line you're using. The legacy `v1` line is in
 maintenance mode — bug fixes only, no new features.
 
-Questions? Open a [Discussion](https://github.com/esengine/DeepSeek-Inx/discussions).
+Questions? Open a [Discussion](https://github.com/esengine/DeepSeek-Reasonix/discussions).

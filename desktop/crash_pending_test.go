@@ -156,12 +156,20 @@ func TestWritePendingCrashScrubsSensitiveText(t *testing.T) {
 }
 
 func TestFlushPendingCrashSendsAndClears(t *testing.T) {
+	isolateDesktopUserDirs(t)
 	oldVersion, oldEndpoint := version, crashEndpoint
 	t.Cleanup(func() {
 		version, crashEndpoint = oldVersion, oldEndpoint
 		removeAllPendingCrashes()
 	})
 	version = "v9.9.9"
+
+	// Fork default is telemetry-off (no outbound requests). Exercise the flush
+	// path with telemetry explicitly enabled so it tests the send/clear logic.
+	app := NewApp()
+	if err := app.SetDesktopTelemetry(true); err != nil {
+		t.Fatalf("SetDesktopTelemetry: %v", err)
+	}
 
 	var hits atomic.Int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -172,7 +180,7 @@ func TestFlushPendingCrashSendsAndClears(t *testing.T) {
 	crashEndpoint = srv.URL
 
 	writePendingCrash("flush", "boom", []byte("stack"))
-	NewApp().flushPendingCrash()
+	app.flushPendingCrash()
 
 	if hits.Load() != 1 {
 		t.Errorf("server hits = %d, want 1", hits.Load())

@@ -1,4 +1,4 @@
-# DeepSeek-Inx 系統架構分析報告
+# DeepSeek-Reasonix 系統架構分析報告
 
 ## 1. 項目基礎信息
 
@@ -82,4 +82,4 @@
 
 ## 5. 總結
 
-**DeepSeek-Inx** 是一個高度模塊化、傳輸無關的 AI Agent 系統。其核心設計原則是「傳輸無關的控制器」（transport-agnostic Controller），位於 `internal/control/` 目錄，負責會話驅動、事件流管理和任務調度。所有前端（命令行 TUI、HTTP/SSE 服務、桌面應用、多平台機器人）都共享同一個控制器層，確保行為一致性。模型提供者層（`internal/provider/`）抽象了不同 LLM 提供商的接口，而工具和插件系統（`internal/tool/`, `internal/plugin/`）支持 MCP（Model Context Protocol）和內置工具。整個系統採用 Go 語言開發，遵循嚴格的包職責分離和緩存優先（cache-first）策略。
+**DeepSeek-Reasonix** 是一個高度模塊化、傳輸無關的 AI Agent 系統。其核心設計原則是「傳輸無關的控制器」（transport-agnostic Controller），位於 `internal/control/` 目錄，負責會話驅動、事件流管理和任務調度。所有前端（命令行 TUI、HTTP/SSE 服務、桌面應用、多平台機器人）都共享同一個控制器層，確保行為一致性。模型提供者層（`internal/provider/`）抽象了不同 LLM 提供商的接口，而工具和插件系統（`internal/tool/`, `internal/plugin/`）支持 MCP（Model Context Protocol）和內置工具。整個系統採用 Go 語言開發，遵循嚴格的包職責分離和緩存優先（cache-first）策略。

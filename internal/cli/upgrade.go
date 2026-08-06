@@ -29,8 +29,8 @@ import (
 )
 
 const (
-	ghOwner                = "esengine"
-	ghRepo                 = "DeepSeek-Inx"
+	ghOwner                = "naamfung"
+	ghRepo                 = "inx"
 	ghAPIReleases          = "https://api.github.com/repos/" + ghOwner + "/" + ghRepo + "/releases?per_page=100"
 	ghDownloadBase         = "https://github.com/" + ghOwner + "/" + ghRepo + "/releases/download"
 	cliGatewayBase         = "https://crash.inx.io/v1/cli/releases"

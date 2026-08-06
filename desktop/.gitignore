@@ -28,20 +28,20 @@
 !/build/linux
 /build/linux/*
 !/build/linux/nfpm.yaml
-!/build/linux/reasonix.desktop
-!/build/linux/io.reasonix.desktop.update.policy
+!/build/linux/inx.desktop
+!/build/linux/io.inx.desktop.update.policy
 !/build/linux/icons
 !/build/linux/icons/**
 
 # Go test binaries
 *.test
 
-# Local config symlinks for `wails dev` (point at the repo-root reasonix.toml/.env
+# Local config symlinks for `wails dev` (point at the repo-root inx.toml/.env
 # so the desktop app resolves the same config/keys the CLI does). Never commit.
-/reasonix.toml
+/inx.toml
 /.env
 
-# `go build` binary produced in-tree (module reasonix/desktop → "desktop")
+# `go build` binary produced in-tree (module inx/desktop → "desktop")
 /desktop
 # Wails dependency-change cache
 /frontend/package.json.md5

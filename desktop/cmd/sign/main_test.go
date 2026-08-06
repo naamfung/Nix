@@ -99,7 +99,7 @@ func TestGenManifest(t *testing.T) {
 	if !ok {
 		t.Fatal("windows-amd64 missing")
 	}
-	wantURL := "https://github.com/esengine/DeepSeek-Inx/releases/download/desktop-v1.2.0/Inx-windows-amd64-installer.exe"
+	wantURL := "https://github.com/naamfung/inx/releases/download/desktop-v1.2.0/Inx-windows-amd64-installer.exe"
 	if win.URL != wantURL {
 		t.Fatalf("windows url = %q, want %q", win.URL, wantURL)
 	}
@@ -190,7 +190,7 @@ func TestGenManifestIgnoresUnknownNativePackages(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	t.Setenv("GITHUB_REPOSITORY", "esengine/DeepSeek-Inx")
+	t.Setenv("GITHUB_REPOSITORY", "naamfung/inx")
 	if err := genManifest(dir, "v1.2.0", "desktop-v1.2.0"); err != nil {
 		t.Fatalf("genManifest: %v", err)
 	}

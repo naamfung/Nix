@@ -178,7 +178,7 @@ function localized(value, lang) {
 
 function refsSuffix(refs = []) {
   if (!refs.length) return "";
-  return ` (${refs.map((ref) => `[#${ref}](https://github.com/esengine/DeepSeek-Inx/pull/${ref})`).join(", ")})`;
+  return ` (${refs.map((ref) => `[#${ref}](https://github.com/naamfung/inx/pull/${ref})`).join(", ")})`;
 }
 
 function renderItems(items, lang) {

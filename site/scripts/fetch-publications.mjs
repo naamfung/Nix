@@ -24,7 +24,7 @@ for (const release of catalog.releases) {
   const tag = `v${release.version}`;
   try {
     const response = await fetch(
-      `https://api.github.com/repos/esengine/DeepSeek-Inx/releases/tags/${encodeURIComponent(tag)}`,
+      `https://api.github.com/repos/naamfung/inx/releases/tags/${encodeURIComponent(tag)}`,
       { headers, signal: AbortSignal.timeout(20_000) },
     );
     if (!response.ok) continue;

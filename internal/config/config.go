@@ -86,8 +86,8 @@ type TelemetryConfig struct {
 }
 
 // CLITelemetryConfigured reports whether the user has made an explicit CLI
-// telemetry choice. The runtime policy still treats an absent value as auto,
-// but persistence must preserve absence until the first eligible consent prompt.
+// telemetry choice. Persistence must preserve absence: the runtime policy
+// treats an absent value as off, so nothing is sent until the user opts in.
 func (c *Config) CLITelemetryConfigured() bool {
 	if c == nil {
 		return false
@@ -100,7 +100,9 @@ func (c *Config) CLITelemetryConfigured() bool {
 	}
 }
 
-// CLITelemetryMode returns the normalized CLI telemetry policy.
+// CLITelemetryMode returns the normalized CLI telemetry policy. An absent
+// value (no explicit choice) means off: this fork targets local-service
+// scenarios and never sends usage data unless the user opts in explicitly.
 func (c *Config) CLITelemetryMode() string {
 	if c == nil {
 		return "off"
@@ -108,13 +110,12 @@ func (c *Config) CLITelemetryMode() string {
 	switch strings.ToLower(strings.TrimSpace(c.Telemetry.CLIMetrics)) {
 	case "on":
 		return "on"
+	case "auto":
+		return "auto"
 	case "off":
 		return "off"
-	case "auto", "":
-		// empty means consent has not been requested yet; treat as auto
-		return "auto"
-	default:
-		return "auto"
+	default: // empty or unrecognized: no explicit choice, default off
+		return "off"
 	}
 }
 

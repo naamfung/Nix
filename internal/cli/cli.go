@@ -2340,24 +2340,8 @@ func configCurrencyCommand(args []string) int {
 }
 
 var (
-	cleanupCLITelemetry        = telemetry.Cleanup
-	startCLITelemetryReporter  = telemetry.Start
-	persistCLITelemetryConsent = func(mode string) error {
-		path := config.UserConfigPath()
-		if strings.TrimSpace(path) == "" {
-			return errors.New("cannot resolve config path")
-		}
-		unlock := config.LockUserConfigEdits()
-		defer unlock()
-		cfg, err := config.LoadForEditReadOnlyStrict(path)
-		if err != nil {
-			return err
-		}
-		if err := cfg.SetCLITelemetryMode(mode); err != nil {
-			return err
-		}
-		return cfg.SaveTo(path)
-	}
+	cleanupCLITelemetry       = telemetry.Cleanup
+	startCLITelemetryReporter = telemetry.Start
 )
 
 func configTelemetryCommand(args []string) int {
@@ -2521,10 +2505,6 @@ func configTelemetryUsage() {
 }
 
 func startCLITelemetry(cfg *config.Config, opts telemetry.Options) *telemetry.Reporter {
-	return startCLITelemetryWithIO(cfg, opts, os.Stdin, os.Stdout, os.Stderr)
-}
-
-func startCLITelemetryWithIO(cfg *config.Config, opts telemetry.Options, in io.Reader, out, errOut io.Writer) *telemetry.Reporter {
 	if cfg == nil {
 		cfg = config.Default()
 	}
@@ -2532,38 +2512,9 @@ func startCLITelemetryWithIO(cfg *config.Config, opts telemetry.Options, in io.R
 	opts.HomeDir = config.InxHomeDir()
 	opts.Proxy = cfg.NetworkProxySpec()
 	opts.Language = cfg.Language
-
-	if cfg.CLITelemetryConfigured() || !telemetry.Enabled(opts.Mode, opts.Version, opts.Interactive) {
-		return startCLITelemetryReporter(opts)
-	}
-
-	fmt.Fprintln(out, i18n.M.CLITelemetryConsentNotice)
-	scanner := bufio.NewScanner(in)
-	mode := ""
-	for mode == "" {
-		answer := strings.ToLower(strings.TrimSpace(ask(scanner, out, i18n.M.CLITelemetryConsentPrompt, "Y/n")))
-		switch answer {
-		case "y", "yes", "y/n":
-			mode = "auto"
-		case "n", "no":
-			mode = "off"
-		default:
-			fmt.Fprintln(out, i18n.M.CLITelemetryConsentInvalid)
-		}
-	}
-
-	if err := persistCLITelemetryConsent(mode); err != nil {
-		fmt.Fprintf(errOut, i18n.M.CLITelemetryConsentSaveFailedFmt+"\n", err)
-		return nil
-	}
-	cfg.Telemetry.CLIMetrics = mode
-	opts.Mode = mode
-	if mode == "off" {
-		if err := cleanupCLITelemetry(opts.HomeDir); err != nil {
-			fmt.Fprintf(errOut, i18n.M.CLITelemetryConsentCleanupFailedFmt+"\n", err)
-		}
-		return nil
-	}
+	// No consent prompt: telemetry defaults to off and only runs after the
+	// user explicitly opts in via `inx config telemetry auto|on`. `telemetry.Start`
+	// itself fails closed when the resolved mode is disabled.
 	return startCLITelemetryReporter(opts)
 }
 

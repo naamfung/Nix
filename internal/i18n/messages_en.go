@@ -530,12 +530,6 @@ var English = Messages{
   inx report send [ID]       send a reviewed report and delete it after success
   inx report delete [ID]     delete a local report without sending`,
 
-	CLITelemetryConsentNotice:           "Inx can send anonymous, content-free CLI usage statistics to crash.inx.io: a random install ID, version, OS, and fixed quality buckets. It never sends prompts, answers, code, paths, model or tool content, or environment variables. You can disable this later with `inx config telemetry off`.",
-	CLITelemetryConsentPrompt:           "Allow anonymous CLI usage statistics?",
-	CLITelemetryConsentInvalid:          "Please answer y or n.",
-	CLITelemetryConsentSaveFailedFmt:    "CLI telemetry remains disabled because the preference could not be saved: %v",
-	CLITelemetryConsentCleanupFailedFmt: "CLI telemetry is disabled, but pending statistics could not be deleted: %v",
-
 	UsageBody: `inx — a config- and plugin-driven coding agent (multi-model)
 
 Usage:

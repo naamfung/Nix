@@ -9,8 +9,8 @@ import (
 
 func TestCLITelemetryConfigDefaultsAndValidation(t *testing.T) {
 	cfg := Default()
-	if got := cfg.CLITelemetryMode(); got != "auto" {
-		t.Fatalf("default mode = %q", got)
+	if got := cfg.CLITelemetryMode(); got != "off" {
+		t.Fatalf("default mode = %q, want off (no explicit choice must never send)", got)
 	}
 	if cfg.CLITelemetryConfigured() {
 		t.Fatal("default config should preserve the undecided telemetry state")

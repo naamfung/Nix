@@ -129,24 +129,23 @@ bash allowlist 或信任提示。Plan 与常规模式使用相同的 Permissions
 ### CLI 上报统计
 
 CLI 可以向 `https://crash.inx.io` 发送每日最多一次的匿名活跃安装 ping，
-以及有界、完全不含内容的事件计数。使用以下用户全局命令配置：
+以及有界、完全不含内容的事件计数。本分支中 telemetry **默认关闭**：
+全新安装不会询问，也不会发送任何内容，除非你显式开启。使用以下用户全局命令配置：
 
 ```bash
 inx config telemetry          # 查看当前生效模式
-inx config telemetry auto     # 默认：仅本机交互式 TTY
+inx config telemetry auto     # 仅本机交互式 TTY
 inx config telemetry on       # 也允许本机 headless `inx run`
 inx config telemetry off      # 关闭并删除待发送计数文件
 ```
 
-正式版 CLI 第一次在符合条件的交互式终端启动时，会先明确说明数据边界，并在任何
-telemetry 请求之前只询问一次。提示为 `[Y/n]`：直接回车、输入 `y` 或 `yes` 会保存为
-`auto`；输入 `n` 或 `no` 会保存为 `off` 并删除待发送计数。选择保存后不再提示，允许的
-后续上报保持静默。如果偏好设置保存失败，则不会上传任何内容。
+默认值为 `off`，不存在首次运行的同意提示。使用 `auto` 或 `on` 显式开启后，
+允许的上报保持静默。
 
 在 CI、开发构建中始终关闭；设置 `DO_NOT_TRACK` 或
 `INX_TELEMETRY=0` 也会关闭。`auto` 模式下，重定向、pipe 或其他非交互会话
-不会上报。尚未保存选择时，这些不符合条件的会话既不会提示，也不会上报。授权后的
-网络失败完全静默，不会改变 stdout、stderr 或进程退出码；未发送计数只会保存在有
+不会上报。尚未保存选择时，会话既不会提示，也不会上报。网络失败完全静默，
+不会改变 stdout、stderr 或进程退出码；未发送计数只会保存在有
 数量和时效上限的本地队列中，等待后续启动重试。
 
 ping 包含一个 CLI 专用的随机 128-bit 安装 ID、CLI 版本、OS、架构和 `cli` surface

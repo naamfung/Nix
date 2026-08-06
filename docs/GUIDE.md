@@ -140,29 +140,26 @@ Inx control variables.
 ### CLI telemetry
 
 The CLI can send a once-per-day anonymous active-install ping and bounded,
-content-free event counters to `https://crash.inx.io`. Configure the
-user-global policy with:
+content-free event counters to `https://crash.inx.io`. Telemetry is **off by
+default** in this fork: a fresh install never asks and never sends anything
+until you explicitly opt in. Configure the user-global policy with:
 
 ```bash
 inx config telemetry          # print the effective mode
-inx config telemetry auto     # default: local interactive TTY only
+inx config telemetry auto     # local interactive TTY only
 inx config telemetry on       # also allow local headless `inx run`
 inx config telemetry off      # disable and delete pending counter files
 ```
 
-On the first eligible release-build interactive session, Inx explains the
-exact data boundary and asks once before any telemetry request. The prompt is
-`[Y/n]`: pressing Enter, `y`, or `yes` stores `auto`; `n` or `no` stores `off`
-and deletes pending counters. After the choice is saved, enabled reporting is
-silent and the prompt is not shown again. If the preference cannot be saved,
-nothing is uploaded.
+`off` is the default; there is no first-run consent prompt. If you opt in with
+`auto` or `on`, enabled reporting is silent.
 
 Reporting is always disabled in CI, development builds, and when
 `DO_NOT_TRACK` is set or `INX_TELEMETRY=0`. Under `auto`, redirected/piped
 or otherwise non-interactive sessions do not report. When no choice has been
-saved yet, these ineligible sessions neither prompt nor report. Network failures
-after consent are silent and never change stdout, stderr, or the process exit
-code; unsent counters stay in a bounded local queue for a later invocation.
+saved yet, sessions neither prompt nor report. Network failures are silent and
+never change stdout, stderr, or the process exit code; unsent counters stay in
+a bounded local queue for a later invocation.
 
 The ping contains a dedicated random 128-bit CLI install ID, CLI version, OS,
 architecture, and the `cli` surface marker. Counter batches use that same ID for

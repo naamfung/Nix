@@ -1,0 +1,63 @@
+version: 2
+project_name: inx
+
+before:
+  hooks:
+    - go mod download
+
+builds:
+  - id: inx
+    main: ./cmd/inx
+    binary: inx
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{ .Tag }}
+    goos: [darwin, linux, windows]
+    goarch: [amd64, arm64]
+
+archives:
+  - id: inx
+    ids: [inx]
+    name_template: "inx-{{ .Os }}-{{ .Arch }}"
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+
+checksum:
+  name_template: SHA256SUMS
+  algorithm: sha256
+
+homebrew_casks:
+  - name: inx
+    ids: [inx]
+    # Prereleases (including v*-preview.* and v*-rc*) must not update the stable
+    # tap; brew has no separate prerelease channel, so uploading either cask
+    # would make it the default `brew install`.
+    # npm is a separate line (release-npm.yml, `npm-v*`), so an npm prerelease no
+    # longer drags brew along — a stable `v*` cask can ship while npm stays on rc.
+    skip_upload: "auto"
+    repository:
+      owner: esengine
+      name: homebrew-inx
+      branch: main
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    homepage: "https://github.com/esengine/DeepSeek-Inx"
+    description: "Cache-first DeepSeek coding agent for the terminal."
+    commit_author:
+      name: inx
+      email: inx@deepseek.com
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/inx"]
+          end
+
+release:
+  prerelease: auto
+  make_latest: false
+  name_template: "Inx CLI {{ .Tag }}"

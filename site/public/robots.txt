@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://inx.io/sitemap-index.xml

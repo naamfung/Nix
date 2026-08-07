@@ -1,4 +1,4 @@
-<h1 align="center">NIX</h1>
+<h1 align="center">INX</h1>
 
 <p align="center">
   <strong>简体中文</strong>

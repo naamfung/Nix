@@ -499,6 +499,7 @@ func (b bash) runForegroundDetailed(ctx context.Context, p bashParams, sh sandbo
 	defer cancel(nil)
 
 	cmd := exec.CommandContext(runCtx, argv[0], argv[1:]...)
+	proc.HideWindow(cmd)
 	cmd.Dir = b.workDir
 	cmd.Env = cmdEnv
 	cmd.WaitDelay = bashWaitDelay

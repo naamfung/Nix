@@ -1355,10 +1355,14 @@ func spawnExecCommand(ctx context.Context, command string, args []string, option
 			if err != nil {
 				return nil, err
 			}
-			return exec.CommandContext(ctx, resolvedShell, resolvedArgs...), nil
+			cmd := exec.CommandContext(ctx, resolvedShell, resolvedArgs...)
+			proc.HideWindow(cmd)
+			return cmd, nil
 		}
 	}
-	return exec.CommandContext(ctx, command, args...), nil
+	cmd := exec.CommandContext(ctx, command, args...)
+	proc.HideWindow(cmd)
+	return cmd, nil
 }
 
 // spawnLegacyCommand preserves the pre-contract behavior:
@@ -1378,10 +1382,14 @@ func spawnLegacyCommand(ctx context.Context, command string, args []string, opti
 		return spawnExecCommand(ctx, command, args, options)
 	}
 	if node, flag, script, ok := repairableNodeEvalArgs(command); ok {
-		return exec.CommandContext(ctx, node, flag, script), nil
+		cmd := exec.CommandContext(ctx, node, flag, script)
+		proc.HideWindow(cmd)
+		return cmd, nil
 	}
 	if powershell, args, ok := repairablePowerShellFileArgs(command); ok {
-		return exec.CommandContext(ctx, powershell, args...), nil
+		cmd := exec.CommandContext(ctx, powershell, args...)
+		proc.HideWindow(cmd)
+		return cmd, nil
 	}
 	if runtime.GOOS == "windows" {
 		if cmd, matched := windowsBatchCommand(ctx, command); matched {
@@ -1393,17 +1401,23 @@ func spawnLegacyCommand(ctx context.Context, command string, args []string, opti
 			if err != nil {
 				return nil, err
 			}
-			return exec.CommandContext(ctx, shell, args...), nil
+			cmd := exec.CommandContext(ctx, shell, args...)
+			proc.HideWindow(cmd)
+			return cmd, nil
 		}
 		if node, flag, script, ok := directNodeEvalArgs(command); ok {
-			return exec.CommandContext(ctx, node, flag, script), nil
+			cmd := exec.CommandContext(ctx, node, flag, script)
+			proc.HideWindow(cmd)
+			return cmd, nil
 		}
 		if cmd, ok := windowsCmdShellCommand(ctx, command); ok {
 			return cmd, nil
 		}
 	}
 	name, args := shellInvocation(command)
-	return exec.CommandContext(ctx, name, args...), nil
+	cmd := exec.CommandContext(ctx, name, args...)
+	proc.HideWindow(cmd)
+	return cmd, nil
 }
 
 func spawnShellCommand(ctx context.Context, command, preferred string, options RuntimeOptions) (*exec.Cmd, error) {
@@ -1430,7 +1444,9 @@ func spawnShellCommand(ctx context.Context, command, preferred string, options R
 			if err != nil {
 				return nil, err
 			}
-			return exec.CommandContext(ctx, path, "-c", command), nil
+			cmd := exec.CommandContext(ctx, path, "-c", command)
+			proc.HideWindow(cmd)
+			return cmd, nil
 		}
 		return exec.CommandContext(ctx, "bash", "-c", command), nil
 	case "powershell", "pwsh":
@@ -1478,7 +1494,9 @@ func rawShellCommand(ctx context.Context, sh sandbox.Shell, command string) (*ex
 	if sh.Kind == sandbox.ShellPowerShell {
 		return powerShellCommand(ctx, path, command), nil
 	}
-	return exec.CommandContext(ctx, path, "-c", command), nil
+	cmd := exec.CommandContext(ctx, path, "-c", command)
+	proc.HideWindow(cmd)
+	return cmd, nil
 }
 
 func powerShellCommand(ctx context.Context, path, command string) *exec.Cmd {
@@ -1496,7 +1514,9 @@ func powerShellCommand(ctx context.Context, path, command string) *exec.Cmd {
 		raw[i*2+1] = byte(unit >> 8)
 	}
 	encoded := base64.StdEncoding.EncodeToString(raw)
-	return exec.CommandContext(ctx, path, "-NoProfile", "-NonInteractive", "-EncodedCommand", encoded)
+	cmd := exec.CommandContext(ctx, path, "-NoProfile", "-NonInteractive", "-EncodedCommand", encoded)
+	proc.HideWindow(cmd)
+	return cmd
 }
 
 func shellInvocation(command string) (string, []string) {

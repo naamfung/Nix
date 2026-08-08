@@ -6,6 +6,8 @@ import (
 	"context"
 	"os/exec"
 	"syscall"
+
+	"inx/internal/proc"
 )
 
 func windowsBatchCommand(ctx context.Context, command string) (*exec.Cmd, bool) {
@@ -31,5 +33,6 @@ func newWindowsBatchCommand(ctx context.Context, commandLine string, ok bool) (*
 	// Go does not backslash-escape the leading quoted batch path.
 	cmd.Args = nil
 	cmd.SysProcAttr = &syscall.SysProcAttr{CmdLine: commandLine}
+	proc.HideWindow(cmd)
 	return cmd, true
 }

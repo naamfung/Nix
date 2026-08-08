@@ -76,6 +76,21 @@ func TestTurnReceiptIgnoresEmptyUsage(t *testing.T) {
 	}
 }
 
+func TestTurnReceiptMarksEstimatedUsage(t *testing.T) {
+	defer restoreThemeForTest(activeColorProfile, activeCLITheme)
+	defer i18n.DetectLanguage("en")
+	activeColorProfile = colorprofile.NoTTY
+	configureCLITheme("dark")
+	i18n.DetectLanguage("en")
+
+	got := renderTurnReceipt(&provider.Usage{TotalTokens: 1_024, Estimated: true}, nil, nil)
+	for _, want := range []string{"≈1.0K tok", "estimated"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("estimated turn receipt %q missing %q", got, want)
+		}
+	}
+}
+
 func TestTurnReceiptBandUsesSingleQuietBoundary(t *testing.T) {
 	defer restoreThemeForTest(activeColorProfile, activeCLITheme)
 	activeColorProfile = colorprofile.NoTTY
@@ -176,7 +191,7 @@ func TestStatusFooterThemesKeepIdenticalGeometry(t *testing.T) {
 	m.effortLevel = "max"
 	m.runtimeProfile = "full"
 	m.balance = "¥12.34"
-	m.gitStatus = gitStatus{Repo: "inx", Branch: "feature/theme-footer", Added: 3}
+	m.gitStatus = gitStatus{Repo: "DeepSeek-Inx", Branch: "feature/theme-footer", Added: 3}
 
 	render := func(mode string, profile colorprofile.Profile) string {
 		activeColorProfile = profile
@@ -205,9 +220,9 @@ func TestStatusFooterGitAndDividerAdaptToTheme(t *testing.T) {
 		t.Run(tt.mode, func(t *testing.T) {
 			configureCLITheme(tt.mode)
 			m := newTestChatTUI()
-			m.gitStatus = gitStatus{Repo: "inx", Branch: "db4be5e6", Detached: true}
+			m.gitStatus = gitStatus{Repo: "DeepSeek-Inx", Branch: "db4be5e6", Detached: true}
 			git := m.layoutGitTelemetry(80)
-			if !strings.Contains(git, tt.gitSGR+"inx") {
+			if !strings.Contains(git, tt.gitSGR+"DeepSeek-Inx") {
 				t.Fatalf("%s Git identity should use warm semantic colour: %q", tt.mode, git)
 			}
 			divider := statusFooterDivider(40)
@@ -367,7 +382,7 @@ func TestStatusFooterSwapsModelAndGitGroups(t *testing.T) {
 	m.effortLevel = "auto"
 	m.balance = "¥12.34"
 	m.gitStatus = gitStatus{
-		Repo:      "inx",
+		Repo:      "DeepSeek-Inx",
 		Branch:    "feature/responsive-footer",
 		Added:     1199,
 		Removed:   244,
@@ -382,13 +397,13 @@ func TestStatusFooterSwapsModelAndGitGroups(t *testing.T) {
 	if !strings.Contains(lines[0], "MODEL deepseek-v4-flash   EFFORT auto   WORK balanced") {
 		t.Fatalf("first row should keep model, effort, and work in one session group:\n%s", strings.Join(lines, "\n"))
 	}
-	if strings.Contains(lines[0], "inx@") {
+	if strings.Contains(lines[0], "DeepSeek-Inx@") {
 		t.Fatalf("first row should not contain Git identity:\n%s", strings.Join(lines, "\n"))
 	}
 	if strings.Trim(lines[1], "─ ") != "" {
 		t.Fatalf("middle row should be a divider:\n%s", strings.Join(lines, "\n"))
 	}
-	if !strings.Contains(lines[2], "inx@feature/responsive-footer") || strings.Contains(lines[2], "…") {
+	if !strings.Contains(lines[2], "DeepSeek-Inx@feature/responsive-footer") || strings.Contains(lines[2], "…") {
 		t.Fatalf("second row should preserve the full Git identity when it fits:\n%s", strings.Join(lines, "\n"))
 	}
 	if !strings.Contains(lines[2], "+1199 -244 ?3") || !strings.HasSuffix(lines[2], "BAL ¥12.34") {
@@ -457,15 +472,15 @@ func TestStatusFooterStacksGitAndTelemetryWithoutFloatingContinuation(t *testing
 
 	m := newTestChatTUI()
 	m.gitStatus = gitStatus{
-		Repo: "inx", Branch: "feature/responsive-footer", Added: 20, Removed: 4,
+		Repo: "DeepSeek-Inx", Branch: "feature/responsive-footer", Added: 20, Removed: 4,
 	}
 	m.balance = "¥123.45"
 
-	lines := strings.Split(ansi.Strip(m.layoutGitTelemetry(44)), "\n")
+	lines := strings.Split(ansi.Strip(m.layoutGitTelemetry(56)), "\n")
 	if len(lines) != 2 {
 		t.Fatalf("stacked Git/telemetry rows = %d, want 2:\n%s", len(lines), strings.Join(lines, "\n"))
 	}
-	if !strings.HasPrefix(lines[0], statusFooterIndent+"inx@") || !strings.Contains(lines[0], "+20 -4") {
+	if !strings.HasPrefix(lines[0], statusFooterIndent+"DeepSeek-Inx@") || !strings.Contains(lines[0], "+20 -4") {
 		t.Fatalf("Git should own the complete first row:\n%s", strings.Join(lines, "\n"))
 	}
 	if !strings.HasPrefix(lines[1], statusFooterIndent+"BAL ¥123.45") {
@@ -482,7 +497,7 @@ func TestStatusFooterNarrowLayoutBreaksBetweenGroups(t *testing.T) {
 	m.runtimeProfile = "delivery"
 	m.balance = "¥123.45"
 	m.gitStatus = gitStatus{
-		Repo:    "inx-workspace",
+		Repo:    "DeepSeek-Inx-Workspace",
 		Branch:  "feature/" + strings.Repeat("long-branch-", 8),
 		Added:   20,
 		Removed: 4,

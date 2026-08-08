@@ -6,6 +6,7 @@ import (
 	"errors"
 	"math"
 	"runtime"
+	"slices"
 	"strings"
 	"sync"
 
@@ -17,9 +18,9 @@ import (
 )
 
 const (
-	inxStatusSchemaVersion    = 1
-	sessionStatusMethod       = "_inx.io/session/status"
-	sessionStatusUpdateMethod = "_inx.io/session/status_update"
+	inxStatusSchemaVersion = 1
+	sessionStatusMethod         = "_inx.io/session/status"
+	sessionStatusUpdateMethod   = "_inx.io/session/status_update"
 )
 
 // InxSchemaCapability advertises one versioned vendor extension in
@@ -70,6 +71,21 @@ type SessionRuntimeStateProvider interface {
 type InxStatusGoal struct {
 	Status    string `json:"status"`
 	Objective string `json:"objective,omitempty"`
+	// Runtime is the optional Goal budget/runtime summary; absent for old
+	// hosts or when no goal is active.
+	Runtime *InxGoalRuntime `json:"runtime,omitempty"`
+}
+
+type InxGoalRuntime struct {
+	TurnsUsed        int    `json:"turnsUsed"`
+	TurnsLimit       int    `json:"turnsLimit"`
+	TokensUsed       int    `json:"tokensUsed"`
+	TokensLimit      int    `json:"tokensLimit"` // Deprecated: always 0; retained for protocol compatibility.
+	NoProgressTurns  int    `json:"noProgressTurns"`
+	NoProgressLimit  int    `json:"noProgressLimit"`
+	LastReason       string `json:"lastReason,omitempty"`
+	StopCause        string `json:"stopCause,omitempty"`
+	BudgetExtensions int    `json:"budgetExtensions"`
 }
 
 type InxTurnOutcome struct {
@@ -89,6 +105,7 @@ type InxUsage struct {
 	ReasoningTokens  int      `json:"reasoningTokens"`
 	CacheHitTokens   int      `json:"cacheHitTokens"`
 	CacheMissTokens  int      `json:"cacheMissTokens"`
+	Estimated        bool     `json:"estimated,omitempty"`
 	CacheHitRatio    *float64 `json:"cacheHitRatio"`
 	EstimatedCost    *float64 `json:"estimatedCost"`
 	Currency         *string  `json:"currency"`
@@ -103,28 +120,28 @@ type InxStatusUsage struct {
 // InxSessionStatus is the stable schemaVersion=1 recovery snapshot.
 // Reasoning text and unbounded terminal output are intentionally absent.
 type InxSessionStatus struct {
-	SchemaVersion  int                 `json:"schemaVersion"`
-	Sequence       uint64              `json:"sequence"`
-	SessionID      string              `json:"sessionId"`
-	State          string              `json:"state"`
-	Model          string              `json:"model"`
-	Effort         string              `json:"effort"`
-	Mode           string              `json:"mode"`
-	WorkMode       string              `json:"workMode"`
-	PlannerMode    string              `json:"plannerMode"`
-	Goal           InxStatusGoal       `json:"goal"`
-	Phase          string              `json:"phase"`
-	TurnOutcome    InxTurnOutcome      `json:"turnOutcome"`
-	FinalReadiness InxFinalReadiness   `json:"finalReadiness"`
-	Sandbox        SessionSandboxState `json:"sandbox"`
-	Usage          InxStatusUsage      `json:"usage"`
+	SchemaVersion  int                    `json:"schemaVersion"`
+	Sequence       uint64                 `json:"sequence"`
+	SessionID      string                 `json:"sessionId"`
+	State          string                 `json:"state"`
+	Model          string                 `json:"model"`
+	Effort         string                 `json:"effort"`
+	Mode           string                 `json:"mode"`
+	WorkMode       string                 `json:"workMode"`
+	PlannerMode    string                 `json:"plannerMode"`
+	Goal           InxStatusGoal     `json:"goal"`
+	Phase          string                 `json:"phase"`
+	TurnOutcome    InxTurnOutcome    `json:"turnOutcome"`
+	FinalReadiness InxFinalReadiness `json:"finalReadiness"`
+	Sandbox        SessionSandboxState    `json:"sandbox"`
+	Usage          InxStatusUsage    `json:"usage"`
 }
 
 type InxStatusUpdate struct {
-	SchemaVersion int              `json:"schemaVersion"`
-	Sequence      uint64           `json:"sequence"`
-	SessionID     string           `json:"sessionId"`
-	Event         string           `json:"event"`
+	SchemaVersion int                   `json:"schemaVersion"`
+	Sequence      uint64                `json:"sequence"`
+	SessionID     string                `json:"sessionId"`
+	Event         string                `json:"event"`
 	Status        InxSessionStatus `json:"status"`
 }
 
@@ -134,6 +151,7 @@ type usageAccumulator struct {
 	reasoningTokens  int
 	cacheHitTokens   int
 	cacheMissTokens  int
+	estimated        bool
 	events           int
 	pricedEvents     int
 	estimatedCost    float64
@@ -150,6 +168,7 @@ func (a *usageAccumulator) add(u *provider.Usage, pricing *provider.Pricing, sou
 	a.reasoningTokens += u.ReasoningTokens
 	a.cacheHitTokens += u.CacheHitTokens
 	a.cacheMissTokens += u.CacheMissTokens
+	a.estimated = a.estimated || u.Estimated
 	a.events++
 	source = strings.TrimSpace(source)
 	if source == "" {
@@ -182,6 +201,7 @@ func (a usageAccumulator) wire() InxUsage {
 		ReasoningTokens:  a.reasoningTokens,
 		CacheHitTokens:   a.cacheHitTokens,
 		CacheMissTokens:  a.cacheMissTokens,
+		Estimated:        a.estimated,
 		UsageSource:      a.source,
 	}
 	if usage.UsageSource == "" {
@@ -342,6 +362,7 @@ type persistedUsageAccumulator struct {
 	ReasoningTokens  int     `json:"reasoningTokens"`
 	CacheHitTokens   int     `json:"cacheHitTokens"`
 	CacheMissTokens  int     `json:"cacheMissTokens"`
+	Estimated        bool    `json:"estimated,omitempty"`
 	Events           int     `json:"events"`
 	PricedEvents     int     `json:"pricedEvents"`
 	EstimatedCost    float64 `json:"estimatedCost"`
@@ -353,8 +374,8 @@ type persistedStatusTelemetry struct {
 	Sequence       uint64                    `json:"sequence"`
 	State          string                    `json:"state"`
 	Phase          string                    `json:"phase"`
-	TurnOutcome    InxTurnOutcome            `json:"turnOutcome"`
-	FinalReadiness InxFinalReadiness         `json:"finalReadiness"`
+	TurnOutcome    InxTurnOutcome       `json:"turnOutcome"`
+	FinalReadiness InxFinalReadiness    `json:"finalReadiness"`
 	TurnUsage      persistedUsageAccumulator `json:"turnUsage"`
 	Cumulative     persistedUsageAccumulator `json:"cumulative"`
 	GoalOverride   string                    `json:"goalOverride,omitempty"`
@@ -364,7 +385,7 @@ func persistUsage(a usageAccumulator) persistedUsageAccumulator {
 	return persistedUsageAccumulator{
 		PromptTokens: a.promptTokens, CompletionTokens: a.completionTokens,
 		ReasoningTokens: a.reasoningTokens, CacheHitTokens: a.cacheHitTokens,
-		CacheMissTokens: a.cacheMissTokens, Events: a.events,
+		CacheMissTokens: a.cacheMissTokens, Estimated: a.estimated, Events: a.events,
 		PricedEvents: a.pricedEvents, EstimatedCost: a.estimatedCost,
 		Currency: a.currency, Source: a.source,
 	}
@@ -374,7 +395,7 @@ func restoreUsage(a persistedUsageAccumulator) usageAccumulator {
 	return usageAccumulator{
 		promptTokens: a.PromptTokens, completionTokens: a.CompletionTokens,
 		reasoningTokens: a.ReasoningTokens, cacheHitTokens: a.CacheHitTokens,
-		cacheMissTokens: a.CacheMissTokens, events: a.Events,
+		cacheMissTokens: a.CacheMissTokens, estimated: a.Estimated, events: a.Events,
 		pricedEvents: a.PricedEvents, estimatedCost: a.EstimatedCost,
 		currency: a.Currency, source: a.Source,
 	}
@@ -616,9 +637,24 @@ func (s *acpSession) statusSnapshot() InxSessionStatus {
 	t := telemetry.snapshot()
 	goalStatus := "none"
 	goalObjective := ""
+	var goalRuntime *InxGoalRuntime
 	if ctrl != nil {
 		goalStatus = normalizeGoalStatus(ctrl.GoalStatus())
 		goalObjective = clipStatusText(ctrl.Goal(), 16_384)
+		if strings.TrimSpace(goalObjective) != "" {
+			rt := ctrl.GoalRuntime()
+			goalRuntime = &InxGoalRuntime{
+				TurnsUsed:        rt.TurnsUsed,
+				TurnsLimit:       rt.TurnsLimit,
+				TokensUsed:       rt.TokensUsed,
+				TokensLimit:      rt.TokensLimit,
+				NoProgressTurns:  rt.NoProgressTurns,
+				NoProgressLimit:  rt.NoProgressLimit,
+				LastReason:       rt.LastReason,
+				StopCause:        rt.StopCause,
+				BudgetExtensions: rt.BudgetExtensions,
+			}
+		}
 	}
 	if t.goalOverride != "" {
 		goalStatus = t.goalOverride
@@ -657,6 +693,7 @@ func (s *acpSession) statusSnapshot() InxSessionStatus {
 		Goal: InxStatusGoal{
 			Status:    goalStatus,
 			Objective: goalObjective,
+			Runtime:   goalRuntime,
 		},
 		Phase:          phase,
 		TurnOutcome:    t.turnOutcome,
@@ -674,9 +711,9 @@ func finalAssistantSummary(ctrl acpController) string {
 		return ""
 	}
 	history := ctrl.History()
-	for i := len(history) - 1; i >= 0; i-- {
-		if history[i].Role == provider.RoleAssistant && strings.TrimSpace(history[i].Content) != "" {
-			return history[i].Content
+	for _, v := range slices.Backward(history) {
+		if v.Role == provider.RoleAssistant && strings.TrimSpace(v.Content) != "" {
+			return v.Content
 		}
 	}
 	return ""

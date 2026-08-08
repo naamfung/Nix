@@ -6,7 +6,6 @@ import (
 	"sort"
 	"strings"
 
-	"inx/internal/config"
 	"inx/internal/hook"
 )
 
@@ -67,9 +66,12 @@ func runHookCommand(args []string, out io.Writer) int {
 	if options.projectRoot == "" {
 		options.projectRoot, _ = os.Getwd()
 	}
-	if options.homeDir == "" {
-		options.homeDir = config.InxHomeDir()
-	}
+	// hook.Inspect's HomeDir is an OS user home directory: a non-empty value
+	// has .inx appended inside the hook package, and passing
+	// config.InxHomeDir() here double-appends it. Leave it empty so the
+	// hook package resolves the platform Inx home itself (correct on
+	// every OS, including Windows where the home is %AppData%\Roaming\inx
+	// rather than ~/.inx) (#7420).
 	inspection := hook.Inspect(hook.LoadOptions{
 		ProjectRoot: options.projectRoot,
 		HomeDir:     options.homeDir,

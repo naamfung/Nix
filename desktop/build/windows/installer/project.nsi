@@ -1,7 +1,7 @@
-Unicode true
+﻿Unicode true
 
 ####
-## Inx per-user NSIS installer.
+## Reasonix per-user NSIS installer.
 ##
 ## This file is COMMITTED and customized (Wails leaves an existing project.nsi
 ## untouched and only regenerates wails_tools.nsh). The customizations vs.
@@ -17,8 +17,8 @@ Unicode true
 ##      InstallLocation (HKCU\...\Uninstall\InstallLocation). When upgrading from
 ##      a build that did not write InstallLocation yet, .onInit falls back to the
 ##      old DisplayIcon path before using the default. Without this, every release
-##      forces the user back to %LOCALAPPDATA%\Programs\Inx even if they had
-##      moved the install to a different drive (e.g. D:\Tools\Inx); the
+##      forces the user back to %LOCALAPPDATA%\Programs\Reasonix even if they had
+##      moved the install to a different drive (e.g. D:\Tools\Reasonix); the
 ##      auto-updater would overwrite the wrong dir, leaving the old install
 ##      orphaned.
 ##
@@ -60,14 +60,14 @@ ManifestDPIAware true
 !define MUI_FINISHPAGE_NOAUTOCLOSE # Wait on the INSTFILES page so the user can take a look into the details of the installation steps
 !define MUI_ABORTWARNING # This will warn the user if they exit from the installer.
 
-!define MUI_PAGE_CUSTOMFUNCTION_PRE inx.skipSetupPageForUpdate
+!define MUI_PAGE_CUSTOMFUNCTION_PRE reasonix.skipSetupPageForUpdate
 !insertmacro MUI_PAGE_WELCOME # Welcome to the installer page.
 # !insertmacro MUI_PAGE_LICENSE "resources\eula.txt" # Adds a EULA page to the installer
-!define MUI_PAGE_CUSTOMFUNCTION_PRE inx.skipSetupPageForUpdate
+!define MUI_PAGE_CUSTOMFUNCTION_PRE reasonix.skipSetupPageForUpdate
 !insertmacro MUI_PAGE_DIRECTORY # In which folder install page.
-!define MUI_PAGE_CUSTOMFUNCTION_SHOW inx.showUpdateProgress
+!define MUI_PAGE_CUSTOMFUNCTION_SHOW reasonix.showUpdateProgress
 !insertmacro MUI_PAGE_INSTFILES # Installing page.
-!define MUI_PAGE_CUSTOMFUNCTION_PRE inx.skipFinishPageForUpdate
+!define MUI_PAGE_CUSTOMFUNCTION_PRE reasonix.skipFinishPageForUpdate
 !insertmacro MUI_PAGE_FINISH # Finished installation page.
 
 !insertmacro MUI_UNPAGE_INSTFILES # Uinstalling page
@@ -76,47 +76,49 @@ ManifestDPIAware true
 !insertmacro MUI_LANGUAGE "SimpChinese"
 !insertmacro MUI_LANGUAGE "TradChinese"
 
-LangString inxUpdateTitle ${LANG_ENGLISH} "Updating Inx"
-LangString inxUpdateTitle ${LANG_SIMPCHINESE} "正在更新 Inx"
-LangString inxUpdateTitle ${LANG_TRADCHINESE} "正在更新 Inx"
-LangString inxUpdateSubtitle ${LANG_ENGLISH} "Installing the verified update. Inx will restart automatically."
-LangString inxUpdateSubtitle ${LANG_SIMPCHINESE} "正在安装已验证的更新，完成后 Inx 将自动重启。"
-LangString inxUpdateSubtitle ${LANG_TRADCHINESE} "正在安裝已驗證的更新，完成後 Inx 將自動重新啟動。"
+LangString reasonixUpdateTitle ${LANG_ENGLISH} "Updating Reasonix"
+LangString reasonixUpdateTitle ${LANG_SIMPCHINESE} "正在更新 Reasonix"
+LangString reasonixUpdateTitle ${LANG_TRADCHINESE} "正在更新 Reasonix"
+LangString reasonixUpdateSubtitle ${LANG_ENGLISH} "Installing the verified update. Reasonix will restart automatically."
+LangString reasonixUpdateSubtitle ${LANG_SIMPCHINESE} "正在安装已验证的更新，完成后 Reasonix 将自动重启。"
+LangString reasonixUpdateSubtitle ${LANG_TRADCHINESE} "正在安裝已驗證的更新，完成後 Reasonix 將自動重新啟動。"
 
 ## Preserve the first-pass generated uninstaller so the release workflow can
 ## Authenticode-sign it together with the other installed payload files.
-## The second pass provides ARG_INX_SIGNED_UNINSTALLER and embeds that
+## The second pass provides ARG_REASONIX_SIGNED_UNINSTALLER and embeds that
 ## signed binary instead of generating another unsigned uninstaller.
-!ifndef ARG_INX_SIGNED_UNINSTALLER
-!uninstfinalize 'cmd.exe /C copy /Y "%1" "inx-uninstall.exe" >NUL'
+!ifndef ARG_REASONIX_SIGNED_UNINSTALLER
+!uninstfinalize 'cmd.exe /C copy /Y "%1" "reasonix-uninstall.exe" >NUL'
 !endif
 #!finalize 'signtool --file "%1"'
 
 Name "${INFO_PRODUCTNAME}"
 OutFile "..\..\bin\${INFO_PROJECTNAME}-${ARCH}-installer.exe" # Name of the installer's file.
-!define INX_DEFAULT_INSTALLDIR "$LOCALAPPDATA\Programs\${INFO_PRODUCTNAME}"
-!define INX_UPDATE_HELPER "inx-update-helper.exe"
-!define INX_GUARD "inx-guard.exe"
-!define INX_LAUNCHER "inx-launcher.exe"
-!define INX_CLI "inx-cli.exe"
-!define INX_PORTABLE_ENTRY "Inx.exe"
-!define INX_LAYOUT_INSTALLER "inx-layout-installer.exe"
-!define INX_PAYLOAD_MANIFEST "inx-payload.json"
-!define INX_PAYLOAD_SIGNATURE "inx-payload.json.minisig"
-!define INX_UNLOCK_RETRIES 60
-Var InxUpdateMode
-Var InxStageMode
+!define REASONIX_DEFAULT_INSTALLDIR "$LOCALAPPDATA\Programs\${INFO_PRODUCTNAME}"
+!define REASONIX_UPDATE_HELPER "reasonix-update-helper.exe"
+!define REASONIX_GUARD "reasonix-guard.exe"
+!define REASONIX_LAUNCHER "reasonix-launcher.exe"
+!define REASONIX_CLI "reasonix-cli.exe"
+!define REASONIX_PORTABLE_ENTRY "Reasonix.exe"
+!define REASONIX_LAYOUT_INSTALLER "reasonix-layout-installer.exe"
+!define REASONIX_PAYLOAD_MANIFEST "reasonix-payload.json"
+!define REASONIX_PAYLOAD_SIGNATURE "reasonix-payload.json.minisig"
+!define REASONIX_LEGACY_UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\Reasonix"
+!define REASONIX_LEGACY_PRODUCT_KEY "Software\reasonix\Reasonix"
+!define REASONIX_UNLOCK_RETRIES 60
+Var ReasonixUpdateMode
+Var ReasonixStageMode
 InstallDirRegKey HKCU "${UNINST_KEY}" "InstallLocation" # Reuse the previous install path on update; .onInit falls back to the default on first install.
-InstallDir "${INX_DEFAULT_INSTALLDIR}" # Per-user install location (no admin rights required).
+InstallDir "${REASONIX_DEFAULT_INSTALLDIR}" # Per-user install location (no admin rights required).
 ShowInstDetails show # This will always show the installation details.
 
 ####
 ## Per-user uninstaller registry (HKCU). Replaces wails.writeUninstaller /
 ## wails.deleteUninstaller, which write HKLM and would fail without admin rights.
 ####
-!macro inx.writeUninstaller
-    !ifdef ARG_INX_SIGNED_UNINSTALLER
-    File "/oname=uninstall.exe" "${ARG_INX_SIGNED_UNINSTALLER}"
+!macro reasonix.writeUninstaller
+    !ifdef ARG_REASONIX_SIGNED_UNINSTALLER
+    File "/oname=uninstall.exe" "${ARG_REASONIX_SIGNED_UNINSTALLER}"
     !else
     WriteUninstaller "$INSTDIR\uninstall.exe"
     !endif
@@ -124,13 +126,17 @@ ShowInstDetails show # This will always show the installation details.
     WriteRegStr HKCU "${UNINST_KEY}" "Publisher" "${INFO_COMPANYNAME}"
     WriteRegStr HKCU "${UNINST_KEY}" "DisplayName" "${INFO_PRODUCTNAME}"
     WriteRegStr HKCU "${UNINST_KEY}" "DisplayVersion" "${INFO_PRODUCTVERSION}"
+    !if /FileExists "${REASONIX_LAUNCHER}"
+    WriteRegStr HKCU "${UNINST_KEY}" "DisplayIcon" "$INSTDIR\${REASONIX_LAUNCHER}"
+    !else
     WriteRegStr HKCU "${UNINST_KEY}" "DisplayIcon" "$INSTDIR\${PRODUCT_EXECUTABLE}"
+    !endif
     WriteRegStr HKCU "${UNINST_KEY}" "UninstallString" "$\"$INSTDIR\uninstall.exe$\""
     WriteRegStr HKCU "${UNINST_KEY}" "QuietUninstallString" "$\"$INSTDIR\uninstall.exe$\" /S"
     # Persist the resolved install path so a subsequent update picks it up
     # via InstallDirRegKey above. Without this, every release would force the
-    # user back to %LOCALAPPDATA%\Programs\Inx even if they had moved
-    # the install to a different drive (e.g. D:\Tools\Inx). The auto-
+    # user back to %LOCALAPPDATA%\Programs\Reasonix even if they had moved
+    # the install to a different drive (e.g. D:\Tools\Reasonix). The auto-
     # updater trusts this persisted path, so it has to be present before the
     # visible progress-only re-install.
     WriteRegStr HKCU "${UNINST_KEY}" "InstallLocation" "$INSTDIR"
@@ -140,7 +146,49 @@ ShowInstDetails show # This will always show the installation details.
     WriteRegDWORD HKCU "${UNINST_KEY}" "EstimatedSize" "$0"
 !macroend
 
-!macro inx.deleteUninstaller
+; Tauri 0.53 separately persisted $INSTDIR under its manufacturer/product key
+; and restores that value before every later install. Clear only a same-root
+; value so re-running 0.53 cannot overwrite the current uninstaller; preserve a
+; genuinely separate legacy installation. If this cleanup fails, retain the old
+; uninstall alias so a later update can retry the migration.
+!macro reasonix.deleteLegacyInstallerStateIfOwned
+    StrCpy $1 "1"
+    ClearErrors
+    ReadRegStr $0 HKCU "${REASONIX_LEGACY_PRODUCT_KEY}" ""
+    ${If} $0 == "$INSTDIR"
+        ClearErrors
+        DeleteRegValue HKCU "${REASONIX_LEGACY_PRODUCT_KEY}" ""
+        ${If} ${Errors}
+            StrCpy $1 "0"
+        ${EndIf}
+    ${ElseIf} $0 == "$\"$INSTDIR$\""
+        ClearErrors
+        DeleteRegValue HKCU "${REASONIX_LEGACY_PRODUCT_KEY}" ""
+        ${If} ${Errors}
+            StrCpy $1 "0"
+        ${EndIf}
+    ${EndIf}
+
+    ${If} $1 == "1"
+        ClearErrors
+        ReadRegStr $0 HKCU "${REASONIX_LEGACY_UNINST_KEY}" "InstallLocation"
+        ${If} $0 == "$INSTDIR"
+            DeleteRegKey HKCU "${REASONIX_LEGACY_UNINST_KEY}"
+        ${ElseIf} $0 == "$\"$INSTDIR$\""
+            DeleteRegKey HKCU "${REASONIX_LEGACY_UNINST_KEY}"
+        ${Else}
+            ClearErrors
+            ReadRegStr $0 HKCU "${REASONIX_LEGACY_UNINST_KEY}" "UninstallString"
+            ${If} $0 == "$INSTDIR\uninstall.exe"
+                DeleteRegKey HKCU "${REASONIX_LEGACY_UNINST_KEY}"
+            ${ElseIf} $0 == "$\"$INSTDIR\uninstall.exe$\""
+                DeleteRegKey HKCU "${REASONIX_LEGACY_UNINST_KEY}"
+            ${EndIf}
+        ${EndIf}
+    ${EndIf}
+!macroend
+
+!macro reasonix.deleteUninstaller
     Delete "$INSTDIR\uninstall.exe"
     DeleteRegKey HKCU "${UNINST_KEY}"
 !macroend
@@ -148,27 +196,27 @@ ShowInstDetails show # This will always show the installation details.
 Function .onInit
    !insertmacro wails.checkArchitecture
 
-   ; The helper passes /INXUPDATE=1 and a final /D=<current directory>.
+   ; The helper passes /REASONIXUPDATE=1 and a final /D=<current directory>.
    ; This mode remains visible but skips every page that could change the
    ; destination, then closes automatically after the file copy so the helper
-   ; can relaunch Inx. A normal manual installer keeps the full wizard.
-   StrCpy $InxUpdateMode "0"
-   StrCpy $InxStageMode "0"
+   ; can relaunch Reasonix. A normal manual installer keeps the full wizard.
+   StrCpy $ReasonixUpdateMode "0"
+   StrCpy $ReasonixStageMode "0"
    ${GetParameters} $R0
    ClearErrors
-   ${GetOptions} $R0 "/INXUPDATE=" $R1
-   IfErrors inx_update_mode_done
-   StrCmp $R1 "1" 0 inx_update_mode_done
-   StrCpy $InxUpdateMode "1"
+   ${GetOptions} $R0 "/REASONIXUPDATE=" $R1
+   IfErrors reasonix_update_mode_done
+   StrCmp $R1 "1" 0 reasonix_update_mode_done
+   StrCpy $ReasonixUpdateMode "1"
 
-inx_update_mode_done:
+reasonix_update_mode_done:
    ClearErrors
-   ${GetOptions} $R0 "/INXSTAGE=" $R2
-   IfErrors inx_stage_mode_done
-   StrCmp $R2 "1" 0 inx_stage_mode_done
-   StrCpy $InxStageMode "1"
+   ${GetOptions} $R0 "/REASONIXSTAGE=" $R2
+   IfErrors reasonix_stage_mode_done
+   StrCmp $R2 "1" 0 reasonix_stage_mode_done
+   StrCpy $ReasonixStageMode "1"
 
-inx_stage_mode_done:
+reasonix_stage_mode_done:
 
    ; InstallDirRegKey leaves $INSTDIR empty when the InstallLocation value is
    ; missing. Older installers still wrote DisplayIcon, so use its parent folder
@@ -176,41 +224,77 @@ inx_stage_mode_done:
    StrCmp $INSTDIR "" 0 done
    ClearErrors
    ReadRegStr $0 HKCU "${UNINST_KEY}" "DisplayIcon"
+   IfErrors legacy_location
+   StrCmp $0 "" legacy_location
+   ${GetParent} "$0" $INSTDIR
+   StrCmp $INSTDIR "" legacy_location done
+
+legacy_location:
+   ; Tauri 0.53 used a different uninstall key and may have stored the selected
+   ; directory with surrounding quotes (for example "D:\Reasonix"). Reuse it
+   ; only while its uninstaller still exists so a stale registry value cannot
+   ; redirect the repair installer into an unrelated directory.
+   ClearErrors
+   ReadRegStr $0 HKCU "${REASONIX_LEGACY_UNINST_KEY}" "InstallLocation"
+   IfErrors legacy_uninstaller
+   StrCmp $0 "" legacy_uninstaller
+   StrCpy $1 $0 1
+   StrCmp $1 "$\"" 0 legacy_location_ready
+   StrCpy $1 $0 1 -1
+   StrCmp $1 "$\"" 0 legacy_location_ready
+   StrCpy $0 $0 -1 1
+
+legacy_location_ready:
+   IfFileExists "$0\uninstall.exe" 0 legacy_uninstaller
+   StrCpy $INSTDIR $0
+   Goto done
+
+legacy_uninstaller:
+   ClearErrors
+   ReadRegStr $0 HKCU "${REASONIX_LEGACY_UNINST_KEY}" "UninstallString"
    IfErrors fallback
    StrCmp $0 "" fallback
+   StrCpy $1 $0 1
+   StrCmp $1 "$\"" 0 legacy_uninstaller_ready
+   StrCpy $1 $0 1 -1
+   StrCmp $1 "$\"" 0 legacy_uninstaller_ready
+   StrCpy $0 $0 -1 1
+
+legacy_uninstaller_ready:
+   IfFileExists "$0" 0 fallback
    ${GetParent} "$0" $INSTDIR
    StrCmp $INSTDIR "" fallback done
 
 fallback:
-   StrCpy $INSTDIR "${INX_DEFAULT_INSTALLDIR}"
+   StrCpy $INSTDIR "${REASONIX_DEFAULT_INSTALLDIR}"
 done:
 FunctionEnd
 
-Function inx.skipSetupPageForUpdate
-   StrCmp $InxUpdateMode "1" 0 inx_show_setup_page
+Function reasonix.skipSetupPageForUpdate
+   StrCmp $ReasonixUpdateMode "1" 0 reasonix_show_setup_page
    Abort
 
-inx_show_setup_page:
+reasonix_show_setup_page:
 FunctionEnd
 
-Function inx.showUpdateProgress
-   StrCmp $InxUpdateMode "1" 0 inx_update_progress_done
-   !insertmacro MUI_HEADER_TEXT "$(inxUpdateTitle)" "$(inxUpdateSubtitle)"
+Function reasonix.showUpdateProgress
+   StrCmp $ReasonixUpdateMode "1" 0 reasonix_update_progress_done
+   !insertmacro MUI_HEADER_TEXT "$(reasonixUpdateTitle)" "$(reasonixUpdateSubtitle)"
    SetDetailsView hide
    SetAutoClose true
    BringToFront
 
-inx_update_progress_done:
+reasonix_update_progress_done:
 FunctionEnd
 
-Function inx.skipFinishPageForUpdate
-   StrCmp $InxUpdateMode "1" 0 inx_show_finish_page
+Function reasonix.skipFinishPageForUpdate
+   StrCmp $ReasonixUpdateMode "1" 0 reasonix_show_finish_page
    Abort
 
-inx_show_finish_page:
+reasonix_show_finish_page:
 FunctionEnd
 
-Function inx.waitForExecutableUnlock
+Function reasonix.waitForExecutableUnlock
    StrCpy $0 0
 
 retry:
@@ -230,37 +314,37 @@ check_versioned_target:
    FileClose $1
 
 check_guard:
-   IfFileExists "$INSTDIR\${INX_GUARD}" 0 check_launcher
+   IfFileExists "$INSTDIR\${REASONIX_GUARD}" 0 check_launcher
    ClearErrors
-   FileOpen $1 "$INSTDIR\${INX_GUARD}" a
+   FileOpen $1 "$INSTDIR\${REASONIX_GUARD}" a
    IfErrors locked
    FileClose $1
 
 check_launcher:
-	IfFileExists "$INSTDIR\${INX_LAUNCHER}" 0 check_cli
+	IfFileExists "$INSTDIR\${REASONIX_LAUNCHER}" 0 check_cli
 	ClearErrors
-	FileOpen $1 "$INSTDIR\${INX_LAUNCHER}" a
+	FileOpen $1 "$INSTDIR\${REASONIX_LAUNCHER}" a
 	IfErrors locked
 	FileClose $1
 
 check_cli:
-	IfFileExists "$INSTDIR\${INX_CLI}" 0 check_portable_entry
+	IfFileExists "$INSTDIR\${REASONIX_CLI}" 0 check_portable_entry
 	ClearErrors
-	FileOpen $1 "$INSTDIR\${INX_CLI}" a
+	FileOpen $1 "$INSTDIR\${REASONIX_CLI}" a
 	IfErrors locked
 	FileClose $1
 
 check_portable_entry:
-   IfFileExists "$INSTDIR\${INX_PORTABLE_ENTRY}" 0 done
+   IfFileExists "$INSTDIR\${REASONIX_PORTABLE_ENTRY}" 0 done
    ClearErrors
-   FileOpen $1 "$INSTDIR\${INX_PORTABLE_ENTRY}" a
+   FileOpen $1 "$INSTDIR\${REASONIX_PORTABLE_ENTRY}" a
    IfErrors locked
    FileClose $1
    Goto done
 
 locked:
    IntOp $0 $0 + 1
-   IntCmp $0 ${INX_UNLOCK_RETRIES} failed 0 0
+   IntCmp $0 ${REASONIX_UNLOCK_RETRIES} failed 0 0
    Sleep 1000
    Goto retry
 
@@ -268,14 +352,14 @@ failed:
    IfSilent silent interactive
 
 interactive:
-   MessageBox MB_RETRYCANCEL|MB_ICONEXCLAMATION "Inx is still running. Close Inx, then click Retry to continue the installation." IDRETRY retry IDCANCEL abort
+   MessageBox MB_RETRYCANCEL|MB_ICONEXCLAMATION "Reasonix is still running. Close Reasonix, then click Retry to continue the installation." IDRETRY retry IDCANCEL abort
    Goto retry
 
 silent:
    SetErrorLevel 1618
 
 abort:
-   Abort "Inx is still running. Close Inx and run the installer again."
+   Abort "Reasonix is still running. Close Reasonix and run the installer again."
 
 done:
 FunctionEnd
@@ -283,41 +367,41 @@ FunctionEnd
 Section
     !insertmacro wails.setShellContext
 
-    ; /INXSTAGE=1: flat six-member payload for 1.18–1.19.1 helpers (and
+    ; /REASONIXSTAGE=1: flat six-member payload for 1.18–1.19.1 helpers (and
     ; the new helper's staging extract). Do not write shortcuts/uninstaller.
     ; Normal install: versioned-v1 layout under versions/v${INFO_PRODUCTVERSION}/
     ; with a permanent thin launcher at InstallRoot. Guard is only present in
     ; STAGE payloads (as the one-shot legacy migrator) and is not persisted on
     ; a normal install.
-    StrCmp $InxStageMode "1" inx_stage_payload
+    StrCmp $ReasonixStageMode "1" reasonix_stage_payload
     !insertmacro wails.webview2runtime
-    Call inx.waitForExecutableUnlock
-    Goto inx_normal_install
+    Call reasonix.waitForExecutableUnlock
+    Goto reasonix_normal_install
 
-inx_stage_payload:
+reasonix_stage_payload:
     SetOutPath $INSTDIR
-    !if /FileExists "${INX_PAYLOAD_MANIFEST}"
-    File "/oname=${INX_PAYLOAD_MANIFEST}" "${INX_PAYLOAD_MANIFEST}"
+    !if /FileExists "${REASONIX_PAYLOAD_MANIFEST}"
+    File "/oname=${REASONIX_PAYLOAD_MANIFEST}" "${REASONIX_PAYLOAD_MANIFEST}"
     !endif
-    !if /FileExists "${INX_PAYLOAD_SIGNATURE}"
-    File "/oname=${INX_PAYLOAD_SIGNATURE}" "${INX_PAYLOAD_SIGNATURE}"
+    !if /FileExists "${REASONIX_PAYLOAD_SIGNATURE}"
+    File "/oname=${REASONIX_PAYLOAD_SIGNATURE}" "${REASONIX_PAYLOAD_SIGNATURE}"
     !endif
     !insertmacro wails.files
-    !if /FileExists "${INX_UPDATE_HELPER}"
-    File "/oname=${INX_UPDATE_HELPER}" "${INX_UPDATE_HELPER}"
+    !if /FileExists "${REASONIX_UPDATE_HELPER}"
+    File "/oname=${REASONIX_UPDATE_HELPER}" "${REASONIX_UPDATE_HELPER}"
     !endif
-    !if /FileExists "${INX_GUARD}"
-    File "/oname=${INX_GUARD}" "${INX_GUARD}"
+    !if /FileExists "${REASONIX_GUARD}"
+    File "/oname=${REASONIX_GUARD}" "${REASONIX_GUARD}"
     !endif
-    !if /FileExists "${INX_LAUNCHER}"
-    File "/oname=${INX_LAUNCHER}" "${INX_LAUNCHER}"
+    !if /FileExists "${REASONIX_LAUNCHER}"
+    File "/oname=${REASONIX_LAUNCHER}" "${REASONIX_LAUNCHER}"
     !endif
-    !if /FileExists "${INX_CLI}"
-    File "/oname=${INX_CLI}" "${INX_CLI}"
+    !if /FileExists "${REASONIX_CLI}"
+    File "/oname=${REASONIX_CLI}" "${REASONIX_CLI}"
     !endif
-    Goto inx_section_done
+    Goto reasonix_section_done
 
-inx_normal_install:
+reasonix_normal_install:
     ; Extract into an install-local temporary directory, then let the signed Go
     ; activator validate the complete release unit, transactionally publish the
     ; version/root entries, and strictly atomically replace current.json last.
@@ -330,45 +414,50 @@ inx_normal_install:
     CreateDirectory "$R9"
     SetOutPath "$R9"
     !insertmacro wails.files
-    !if /FileExists "${INX_UPDATE_HELPER}"
-    File "/oname=${INX_UPDATE_HELPER}" "${INX_UPDATE_HELPER}"
+    !if /FileExists "${REASONIX_UPDATE_HELPER}"
+    File "/oname=${REASONIX_UPDATE_HELPER}" "${REASONIX_UPDATE_HELPER}"
     !else
-    !warning "${INX_UPDATE_HELPER} was not found; Windows auto-update will fail safely until the helper is installed."
+    !warning "${REASONIX_UPDATE_HELPER} was not found; Windows auto-update will fail safely until the helper is installed."
     !endif
-    !if /FileExists "${INX_CLI}"
-    File "/oname=${INX_CLI}" "${INX_CLI}"
+    !if /FileExists "${REASONIX_CLI}"
+    File "/oname=${REASONIX_CLI}" "${REASONIX_CLI}"
     !else
-    !warning "${INX_CLI} was not found; remote upload installation will be unavailable."
+    !warning "${REASONIX_CLI} was not found; remote upload installation will be unavailable."
     !endif
-    !if /FileExists "${INX_LAUNCHER}"
-    File "/oname=${INX_LAUNCHER}" "${INX_LAUNCHER}"
+    !if /FileExists "${REASONIX_LAUNCHER}"
+    File "/oname=${REASONIX_LAUNCHER}" "${REASONIX_LAUNCHER}"
     !endif
 
     SetOutPath "$PLUGINSDIR"
-    !if /FileExists "${INX_GUARD}"
-    File "/oname=${INX_LAYOUT_INSTALLER}" "${INX_GUARD}"
+    !if /FileExists "${REASONIX_GUARD}"
+    File "/oname=${REASONIX_LAYOUT_INSTALLER}" "${REASONIX_GUARD}"
     !else
-    !error "${INX_GUARD} was not found; normal installs require the signed layout activator."
+    !error "${REASONIX_GUARD} was not found; normal installs require the signed layout activator."
     !endif
-    ExecWait '"$PLUGINSDIR\${INX_LAYOUT_INSTALLER}" --install-root "$INSTDIR" --version "v${INFO_PRODUCTVERSION}" --activate-staging "$R9" --no-relaunch' $0
-    StrCmp $0 "0" inx_layout_activated
-    DetailPrint "Inx layout activation failed with exit code $0; the previous version remains active."
+    DetailPrint "Reasonix layout activator output:"
+    nsExec::ExecToLog /OEM '"$PLUGINSDIR\${REASONIX_LAYOUT_INSTALLER}" --install-root "$INSTDIR" --version "v${INFO_PRODUCTVERSION}" --activate-staging "$R9" --no-relaunch'
+    Pop $0
+    StrCmp $0 "0" reasonix_layout_activated
+    DetailPrint "Reasonix layout activation failed with exit code $0; the previous version remains active."
     RMDir /r "$R9"
     SetErrorLevel 1
-    Abort "Inx could not activate the verified release. The previous version was left unchanged."
+    Abort "Reasonix could not activate the verified release. The previous version was left unchanged."
 
-inx_layout_activated:
+reasonix_layout_activated:
     RMDir /r "$R9"
     SetOutPath "$INSTDIR"
 
     ; Remove flat leftovers from prior 1.18–1.19 installs when overwriting.
     Delete "$INSTDIR\${PRODUCT_EXECUTABLE}"
-    Delete "$INSTDIR\${INX_GUARD}"
-    Delete "$INSTDIR\${INX_UPDATE_HELPER}"
+    Delete "$INSTDIR\${REASONIX_GUARD}"
+    Delete "$INSTDIR\${REASONIX_UPDATE_HELPER}"
 
-    !if /FileExists "${INX_LAUNCHER}"
-    CreateShortcut "$SMPROGRAMS\${INFO_PRODUCTNAME}.lnk" "$INSTDIR\${INX_LAUNCHER}" "" "$INSTDIR\versions\v${INFO_PRODUCTVERSION}\${PRODUCT_EXECUTABLE}" 0
-    CreateShortCut "$DESKTOP\${INFO_PRODUCTNAME}.lnk" "$INSTDIR\${INX_LAUNCHER}" "" "$INSTDIR\versions\v${INFO_PRODUCTVERSION}\${PRODUCT_EXECUTABLE}" 0
+    !if /FileExists "${REASONIX_LAUNCHER}"
+    ; Keep both target and icon on the stable launcher. Pointing IconLocation at
+    ; versions\vX\reasonix-desktop.exe leaves a blank shortcut as soon as version
+    ; retention removes that directory after a later update.
+    CreateShortcut "$SMPROGRAMS\${INFO_PRODUCTNAME}.lnk" "$INSTDIR\${REASONIX_LAUNCHER}" "" "$INSTDIR\${REASONIX_LAUNCHER}" 0
+    CreateShortCut "$DESKTOP\${INFO_PRODUCTNAME}.lnk" "$INSTDIR\${REASONIX_LAUNCHER}" "" "$INSTDIR\${REASONIX_LAUNCHER}" 0
     !else
     CreateShortcut "$SMPROGRAMS\${INFO_PRODUCTNAME}.lnk" "$INSTDIR\versions\v${INFO_PRODUCTVERSION}\${PRODUCT_EXECUTABLE}"
     CreateShortCut "$DESKTOP\${INFO_PRODUCTNAME}.lnk" "$INSTDIR\versions\v${INFO_PRODUCTVERSION}\${PRODUCT_EXECUTABLE}"
@@ -376,9 +465,10 @@ inx_layout_activated:
 
     !insertmacro wails.associateFiles
     !insertmacro wails.associateCustomProtocols
-    !insertmacro inx.writeUninstaller
+    !insertmacro reasonix.writeUninstaller
+    !insertmacro reasonix.deleteLegacyInstallerStateIfOwned
 
-inx_section_done:
+reasonix_section_done:
 SectionEnd
 
 Section "uninstall"
@@ -388,11 +478,11 @@ Section "uninstall"
 
     ; Precision uninstall: flat leftovers, thin entry points, and version trees.
     Delete "$INSTDIR\${PRODUCT_EXECUTABLE}"
-    Delete "$INSTDIR\${INX_UPDATE_HELPER}"
-    Delete "$INSTDIR\${INX_GUARD}"
-    Delete "$INSTDIR\${INX_LAUNCHER}"
-    Delete "$INSTDIR\${INX_CLI}"
-    Delete "$INSTDIR\${INX_PORTABLE_ENTRY}"
+    Delete "$INSTDIR\${REASONIX_UPDATE_HELPER}"
+    Delete "$INSTDIR\${REASONIX_GUARD}"
+    Delete "$INSTDIR\${REASONIX_LAUNCHER}"
+    Delete "$INSTDIR\${REASONIX_CLI}"
+    Delete "$INSTDIR\${REASONIX_PORTABLE_ENTRY}"
     Delete "$INSTDIR\current.json"
     RMDir /r "$INSTDIR\versions"
 
@@ -402,7 +492,8 @@ Section "uninstall"
     !insertmacro wails.unassociateFiles
     !insertmacro wails.unassociateCustomProtocols
 
-    !insertmacro inx.deleteUninstaller
+    !insertmacro reasonix.deleteUninstaller
+    !insertmacro reasonix.deleteLegacyInstallerStateIfOwned
 
     ; Only remove the installation directory if it is empty to prevent data loss
     RMDir $INSTDIR

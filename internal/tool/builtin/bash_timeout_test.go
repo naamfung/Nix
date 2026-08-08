@@ -11,108 +11,53 @@ import (
 	"inx/internal/sandbox"
 )
 
-func TestBashIdleTimeoutConstants(t *testing.T) {
-	// Verify that the idle timeout constants are set correctly.
-	if idleTimeoutInitial != 10*time.Minute {
-		t.Fatalf("expected idleTimeoutInitial 10m, got %v", idleTimeoutInitial)
-	}
-	if idleTimeoutExtend != 2*time.Minute {
-		t.Fatalf("expected idleTimeoutExtend 2m, got %v", idleTimeoutExtend)
-	}
-}
-
-func TestIdleTimeoutManagerInitialTimeout(t *testing.T) {
-	const initial = 200 * time.Millisecond
-	ctx, m := newIdleTimeoutManager(context.Background(), initial, 100*time.Millisecond)
-	defer m.cancel(context.Canceled)
-
-	select {
-	case <-ctx.Done():
-		if !errors.Is(context.Cause(ctx), errBashIdleTimeout) {
-			t.Fatalf("cause = %v, want errBashIdleTimeout", context.Cause(ctx))
-		}
-	case <-time.After(initial + 300*time.Millisecond):
-		t.Fatal("context not cancelled by the initial deadline")
-	}
-}
-
-func TestIdleTimeoutManagerActivityExtendsDeadline(t *testing.T) {
-	// Combined-command scenario "short; echo sep; long": the separator output
-	// at ~150ms must push the absolute deadline out (initial + extend), not
-	// collapse it to the extension window measured from the activity (which
-	// would kill a silent long tail ~450ms in).
-	const initial = 600 * time.Millisecond
-	const extend = 300 * time.Millisecond
-	ctx, m := newIdleTimeoutManager(context.Background(), initial, extend)
-	defer m.cancel(context.Canceled)
-
-	time.Sleep(150 * time.Millisecond)
-	m.reset()
-
-	select {
-	case <-ctx.Done():
-		t.Fatalf("context cancelled too early after activity: %v", context.Cause(ctx))
-	case <-time.After(initial + 100*time.Millisecond):
-		// Still alive past the original deadline: the extension preserved it.
-	}
-
-	select {
-	case <-ctx.Done():
-		if !errors.Is(context.Cause(ctx), errBashIdleTimeout) {
-			t.Fatalf("cause = %v, want errBashIdleTimeout", context.Cause(ctx))
-		}
-	case <-time.After(extend + 400*time.Millisecond):
-		t.Fatal("context not cancelled by the extended deadline")
-	}
-}
-
-func TestIdleTimeoutManagerExtensionsAccumulate(t *testing.T) {
-	const initial = 600 * time.Millisecond
-	const extend = 300 * time.Millisecond
-	ctx, m := newIdleTimeoutManager(context.Background(), initial, extend)
-	defer m.cancel(context.Canceled)
-
-	for i := 0; i < 3; i++ {
-		time.Sleep(100 * time.Millisecond)
-		m.reset()
-	}
-
-	select {
-	case <-ctx.Done():
-		t.Fatalf("context cancelled too early after repeated activity: %v", context.Cause(ctx))
-	case <-time.After(initial + extend + 200*time.Millisecond):
-		// 1100ms elapsed; three extensions push the deadline to 1500ms.
-	}
-
-	select {
-	case <-ctx.Done():
-		if !errors.Is(context.Cause(ctx), errBashIdleTimeout) {
-			t.Fatalf("cause = %v, want errBashIdleTimeout", context.Cause(ctx))
-		}
-	case <-time.After(initial + 3*extend + 200*time.Millisecond):
-		t.Fatal("context not cancelled after the accumulated deadline passed")
-	}
-}
-
-func TestBashIdleTimeoutWithActivity(t *testing.T) {
+func TestBashForegroundTimeoutConfig(t *testing.T) {
 	sh := sandbox.ResolveShell("", "", nil)
-	// A command that outputs periodically should not timeout within the test duration.
+	b := bash{shell: sh, timeout: 150 * time.Millisecond}
+
+	start := time.Now()
+	out, err := b.Execute(context.Background(), argsJSON(t, map[string]any{"command": longSleepCommand(sh)}))
+	elapsed := time.Since(start)
+	if err == nil {
+		t.Fatalf("expected timeout error, got nil (out=%q)", out)
+	}
+	if !strings.Contains(err.Error(), "timed out") {
+		t.Fatalf("error = %v, want timeout", err)
+	}
+	if elapsed > 5*time.Second {
+		t.Fatalf("configured timeout returned too slowly: %v", elapsed)
+	}
+}
+
+func TestBashExplicitZeroTimeoutDoesNotCapForeground(t *testing.T) {
+	sh := sandbox.ResolveShell("", "", nil)
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	start := time.Now()
-	// Command that outputs periodically
-	cmdStr := "echo result-1; sleep 0.5; echo result-2; sleep 0.5; echo result-3"
-	out, err := (bash{shell: sh}).Execute(ctx, argsJSON(t, map[string]any{"command": cmdStr}))
+	out, err := (bash{shell: sh, timeout: 0}).Execute(ctx, argsJSON(t, map[string]any{"command": oneSecondCommand(sh)}))
 	elapsed := time.Since(start)
 	if err != nil {
-		t.Fatalf("command with activity failed: %v (out=%q)", err, out)
+		t.Fatalf("zero-timeout foreground command failed: %v (out=%q)", err, out)
 	}
-	if !strings.Contains(out, "result-3") {
-		t.Fatalf("output = %q, want 'result-3'", out)
+	if !strings.Contains(out, "done") {
+		t.Fatalf("output = %q, want done", out)
 	}
-	if elapsed > 3*time.Second {
-		t.Fatalf("command returned too slowly: %v", elapsed)
+	if elapsed < 800*time.Millisecond {
+		t.Fatalf("command returned too quickly (%v), so the sleep did not run", elapsed)
+	}
+}
+
+func TestWorkspacePassesBashTimeout(t *testing.T) {
+	sh := sandbox.ResolveShell("", "", nil)
+	b := byName(Workspace{Dir: t.TempDir(), BashTimeout: 150 * time.Millisecond}.Tools())["bash"]
+
+	out, err := b.Execute(context.Background(), argsJSON(t, map[string]any{"command": longSleepCommand(sh)}))
+	if err == nil {
+		t.Fatalf("expected workspace bash timeout, got nil (out=%q)", out)
+	}
+	if !strings.Contains(err.Error(), "timed out") {
+		t.Fatalf("error = %v, want timeout", err)
 	}
 }
 
@@ -128,5 +73,51 @@ func TestNormalizeBashRunErrorAllowsPreservedWaitDelay(t *testing.T) {
 	cancel()
 	if err := normalizeBashRunError(ctx, exec.ErrWaitDelay, true); !errors.Is(err, exec.ErrWaitDelay) {
 		t.Fatalf("cancelled WaitDelay should remain visible, got %v", err)
+	}
+}
+
+func longSleepCommand(sh sandbox.Shell) string {
+	if sh.Kind == sandbox.ShellPowerShell {
+		return "Start-Sleep -Seconds 2"
+	}
+	return "sleep 2"
+}
+
+func oneSecondCommand(sh sandbox.Shell) string {
+	if sh.Kind == sandbox.ShellPowerShell {
+		return "Start-Sleep -Seconds 1; Write-Output done"
+	}
+	return "sleep 1; printf done"
+}
+
+func BenchmarkBashForegroundTimeoutExplicitZero(b *testing.B) {
+	bt := bash{timeout: 0}
+	ctx := context.Background()
+	for b.Loop() {
+		runCtx := ctx
+		timeout := bt.foregroundTimeout()
+		if timeout > 0 {
+			b.Fatal("zero-value bash should not create a timeout context")
+		}
+		if runCtx == nil {
+			b.Fatal("nil context")
+		}
+	}
+}
+
+func BenchmarkBashForegroundTimeoutConfiguredCap(b *testing.B) {
+	bt := bash{timeout: 120 * time.Second}
+	ctx := context.Background()
+	for b.Loop() {
+		runCtx := ctx
+		timeout := bt.foregroundTimeout()
+		if timeout > 0 {
+			var cancel context.CancelFunc
+			runCtx, cancel = context.WithTimeoutCause(ctx, timeout, errors.New("bash foreground timeout"))
+			cancel()
+		}
+		if runCtx == nil {
+			b.Fatal("nil context")
+		}
 	}
 }

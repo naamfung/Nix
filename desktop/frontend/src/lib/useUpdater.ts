@@ -18,7 +18,9 @@ export type UpdateStatus =
   | { kind: "installing"; info?: UpdateInfo }
   | { kind: "relaunching"; info?: UpdateInfo }
   | { kind: "done" }
-  | { kind: "error"; message: string; info?: UpdateInfo; manualHint?: boolean };
+  | { kind: "error"; message: string; info?: UpdateInfo; disposition: UpdateErrorDisposition };
+
+export type UpdateErrorDisposition = "retryable" | "recovery" | "manual";
 
 export interface Updater {
   status: UpdateStatus;
@@ -26,6 +28,8 @@ export interface Updater {
   /** Single-action update: download + verify + install + relaunch. */
   apply: (info: UpdateInfo) => void;
   openDownload: () => void;
+  /** Discard a stuck previous update transaction so the next install can proceed. */
+  abandonPending: () => Promise<void>;
   reset: () => void;
 }
 
@@ -33,20 +37,24 @@ function errMsg(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
 
-function offersManualFallback(message: string): boolean {
+export function classifyUpdateError(message: string): UpdateErrorDisposition {
   const low = message.toLowerCase();
-  return (
-    low.includes("authorization failed") ||
-    low.includes("manual update required") ||
-    low.includes("could not safely finish the previous update") ||
-    low.includes("pkexec") ||
-    low.includes("sudo apt install")
-  );
+  if (/pending update already exists|could not safely finish the previous update|handoff backup|awaiting startup health|discard the previous update|previous update is still completing/.test(low)) {
+    return "recovery";
+  }
+  if (/authorization failed|manual update required|pkexec|sudo apt install/.test(low)) {
+    return "manual";
+  }
+  return "retryable";
+}
+
+function updateError(message: string, info?: UpdateInfo): UpdateStatus {
+  return { kind: "error", message, info, disposition: classifyUpdateError(message) };
 }
 
 const UpdaterContext = createContext<Updater | null>(null);
 
-type UpdaterOperationKind = "idle" | "checking" | "ready" | "applying";
+type UpdaterOperationKind = "idle" | "checking" | "ready" | "applying" | "abandoning";
 
 interface UpdaterOperation {
   epoch: number;
@@ -69,7 +77,7 @@ function normalizedChannel(channel: string): "stable" | "preview" {
 }
 
 function isBusyOperation(kind: UpdaterOperationKind): boolean {
-  return kind === "checking" || kind === "applying";
+  return kind === "checking" || kind === "applying" || kind === "abandoning";
 }
 
 function useUpdaterInternal(): Updater {
@@ -167,12 +175,7 @@ function useUpdaterInternal(): Updater {
           case "done":
             return { kind: "done" };
           case "error":
-            return {
-              kind: "error",
-              message: p.err ?? "update failed",
-              info,
-              manualHint: offersManualFallback(p.err ?? ""),
-            };
+            return updateError(p.err ?? "update failed", info);
           default:
             return cur;
         }
@@ -181,6 +184,10 @@ function useUpdaterInternal(): Updater {
   }, []);
 
   const check = useCallback(async () => {
+    // A newer check may supersede an in-flight check (and historically may
+    // interrupt apply). Discard owns exclusive recovery work and must not be
+    // epoch-stolen by Check/Retry while AbandonPendingUpdate is outstanding.
+    if (operationRef.current.kind === "abandoning") return;
     const operation = beginOperation("stable", "checking");
     setStatus({ kind: "checking" });
     try {
@@ -194,17 +201,14 @@ function useUpdaterInternal(): Updater {
       const responseChannel = normalizedChannel(info.channel);
       if (operation.channel && responseChannel !== operation.channel) {
         completeOperation(operation);
-        setStatus({
-          kind: "error",
-          message: `update check returned ${responseChannel} for requested ${operation.channel} channel`,
-        });
+        setStatus(updateError(`update check returned ${responseChannel} for requested ${operation.channel} channel`));
         return;
       }
       operation.channel = responseChannel;
       operation.expectedVersion = info.latest;
       operationRef.current = { ...operation, kind: "ready" };
       if (info.err) {
-        setStatus({ kind: "error", message: info.err, info });
+        setStatus(updateError(info.err, info));
         return;
       }
       if (!info.available) {
@@ -215,14 +219,14 @@ function useUpdaterInternal(): Updater {
     } catch (e) {
       if (!isCurrentOperation(operation)) return;
       completeOperation(operation);
-      setStatus({ kind: "error", message: errMsg(e) });
+      setStatus(updateError(errMsg(e)));
     }
   }, [beginOperation, completeOperation, isCurrentOperation]);
 
   const apply = useCallback((info: UpdateInfo) => {
     const selectedChannel = normalizedChannel(info.channel);
     if (selectedChannel !== "stable") {
-      setStatus({ kind: "error", message: "update check returned a retired release channel" });
+      setStatus(updateError("update check returned a retired release channel"));
       return;
     }
     const active = operationRef.current;
@@ -241,13 +245,35 @@ function useUpdaterInternal(): Updater {
       if (!isCurrentOperation(operation)) return;
       const message = errMsg(e);
       completeOperation(operation);
-      setStatus({ kind: "error", message, info, manualHint: offersManualFallback(message) });
+      setStatus(updateError(message, info));
     });
   }, [beginOperation, completeOperation, isCurrentOperation]);
 
   const openDownload = useCallback(() => {
     void app.OpenDownloadPage();
   }, []);
+
+  const abandonPending = useCallback(async () => {
+    const active = operationRef.current;
+    if (isBusyOperation(active.kind)) return;
+    // Publish busy UI immediately so Settings/Banner disable Retry/Check while
+    // the discard promise is outstanding. Kind "abandoning" is distinct from
+    // "checking" so a concurrent check cannot supersede the discard epoch.
+    const operation = beginOperation(active.channel || "stable", "abandoning");
+    setStatus({ kind: "checking" });
+    try {
+      if (typeof app.AbandonPendingUpdate === "function") {
+        await app.AbandonPendingUpdate();
+      }
+      if (!isCurrentOperation(operation)) return;
+      completeOperation(operation);
+      setStatus({ kind: "idle" });
+    } catch (e) {
+      if (!isCurrentOperation(operation)) return;
+      completeOperation(operation);
+      setStatus(updateError(errMsg(e)));
+    }
+  }, [beginOperation, completeOperation, isCurrentOperation]);
 
   const reset = useCallback(() => {
     const epoch = operationRef.current.epoch + 1;
@@ -261,7 +287,7 @@ function useUpdaterInternal(): Updater {
     setStatus({ kind: "idle" });
   }, []);
 
-  return { status, check, apply, openDownload, reset };
+  return { status, check, apply, openDownload, abandonPending, reset };
 }
 
 export function UpdaterProvider({ children }: { children: ReactNode }) {

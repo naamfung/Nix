@@ -30,15 +30,18 @@ const candidateSha = execFileSync("git", ["rev-parse", "HEAD"], {
   cwd: ROOT,
   encoding: "utf8",
 }).trim();
+const gitCommit = candidateSha.slice(0, 12);
+// Real UTC build clock for version --verbose/--json (not VCS commit time).
+const buildTimeUTC = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
 
 rmSync(STAGE, { recursive: true, force: true });
 mkdirSync(STAGE, { recursive: true });
 
 const subPackages = [];
 for (const t of TARGETS) {
-  const name = `@inx/cli-${t.node}`;
+  const name = `@reasonix/cli-${t.node}`;
   const dir = join(STAGE, `cli-${t.node}`);
-  const exe = t.goos === "windows" ? "inx.exe" : "inx";
+  const exe = t.goos === "windows" ? "reasonix.exe" : "reasonix";
   mkdirSync(join(dir, "bin"), { recursive: true });
 
   console.log(`build ${t.goos}/${t.goarch} -> ${name}`);
@@ -48,10 +51,10 @@ for (const t of TARGETS) {
       "build",
       "-trimpath",
       "-ldflags",
-      `-s -w -X main.version=${binaryVersion}`,
+      `-s -w -X main.version=${binaryVersion} -X main.gitCommit=${gitCommit} -X main.buildTimeUTC=${buildTimeUTC} -X reasonix/internal/productdocs.linkedVersion=${binaryVersion} -X reasonix/internal/productdocs.linkedRevision=${candidateSha}`,
       "-o",
       join(dir, "bin", exe),
-      "./cmd/inx",
+      "./cmd/reasonix",
     ],
     {
       cwd: ROOT,
@@ -66,16 +69,16 @@ for (const t of TARGETS) {
       {
         name,
         version,
-        description: `inx prebuilt binary for ${t.node}.`,
+        description: `reasonix prebuilt binary for ${t.node}.`,
         os: [t.goos === "windows" ? "win32" : t.goos],
         cpu: [t.goarch === "amd64" ? "x64" : "arm64"],
         files: ["bin/"],
         license: "MIT",
         repository: {
           type: "git",
-          url: "git+https://github.com/naamfung/inx.git",
+          url: "git+https://github.com/esengine/DeepSeek-Reasonix.git",
         },
-        inxCandidateSha: candidateSha,
+        reasonixCandidateSha: candidateSha,
       },
       null,
       2,
@@ -84,16 +87,16 @@ for (const t of TARGETS) {
   subPackages.push({ name, dir });
 }
 
-const mainDir = join(STAGE, "inx");
+const mainDir = join(STAGE, "reasonix");
 mkdirSync(mainDir, { recursive: true });
-cpSync(join(HERE, "inx", "bin"), join(mainDir, "bin"), { recursive: true });
+cpSync(join(HERE, "reasonix", "bin"), join(mainDir, "bin"), { recursive: true });
 cpSync(join(ROOT, "README.md"), join(mainDir, "README.md"));
 
 const mainPkg = JSON.parse(
-  readFileSync(join(HERE, "inx", "package.json"), "utf8"),
+  readFileSync(join(HERE, "reasonix", "package.json"), "utf8"),
 );
 mainPkg.version = version;
-mainPkg.inxCandidateSha = candidateSha;
+mainPkg.reasonixCandidateSha = candidateSha;
 for (const key of Object.keys(mainPkg.optionalDependencies)) {
   mainPkg.optionalDependencies[key] = version;
 }
@@ -111,7 +114,7 @@ if (!publish) {
 // reuses packages that already prove the same candidate SHA, fills only missing
 // packages, and never moves latest/next/canary back to an older version.
 publishPackages({
-  packages: [...subPackages, { name: "inx", dir: mainDir }],
+  packages: [...subPackages, { name: "reasonix", dir: mainDir }],
   version,
   candidateSha,
 });

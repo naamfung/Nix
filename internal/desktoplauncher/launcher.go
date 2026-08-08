@@ -3,6 +3,7 @@
 package desktoplauncher
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -10,6 +11,7 @@ import (
 	"runtime"
 	"strings"
 
+	"inx/internal/appidentity"
 	"inx/internal/installlayout"
 )
 
@@ -26,11 +28,17 @@ func Run(args []string, buildVersion string) int {
 			return 0
 		}
 	}
+	if err := appidentity.ApplyToCurrentProcess(); err != nil {
+		fmt.Fprintln(os.Stderr, "warning: apply Windows app identity:", err)
+	}
 
 	installRoot, err := ResolveInstallRoot()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
 		return 1
+	}
+	if err := appidentity.RepairOwnedShortcuts(installRoot); err != nil {
+		fmt.Fprintln(os.Stderr, "warning: repair Windows shortcut identity:", err)
 	}
 	if err := runLegacyMigratorIfNeeded(installRoot); err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
@@ -54,7 +62,8 @@ func Run(args []string, buildVersion string) int {
 		return 0
 	}
 	if err := cmd.Run(); err != nil {
-		if exit, ok := err.(*exec.ExitError); ok {
+		var exit *exec.ExitError
+		if errors.As(err, &exit) {
 			return exit.ExitCode()
 		}
 		fmt.Fprintln(os.Stderr, "error:", err)
@@ -69,10 +78,15 @@ func ResolveInstallRoot() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("resolve launcher path: %w", err)
 	}
-	if resolved, resolveErr := filepath.EvalSymlinks(exe); resolveErr == nil {
-		exe = resolved
+	return resolveInstallRoot(exe)
+}
+
+func resolveInstallRoot(exe string) (string, error) {
+	resolved, err := resolveExecutablePath(exe)
+	if err != nil {
+		return "", fmt.Errorf("resolve launcher path: %w", err)
 	}
-	return filepath.Clean(filepath.Dir(exe)), nil
+	return filepath.Clean(filepath.Dir(resolved)), nil
 }
 
 // ResolveDesktopPath resolves current.json when present. A present but invalid
@@ -145,7 +159,7 @@ func siblingDesktop(installRoot string) string {
 func StripLegacyLaunchArgs(args []string) []string {
 	out := make([]string, 0, len(args))
 	skipNext := false
-	for i := 0; i < len(args); i++ {
+	for i := range args {
 		if skipNext {
 			skipNext = false
 			continue

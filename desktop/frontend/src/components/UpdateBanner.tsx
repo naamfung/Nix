@@ -18,7 +18,7 @@ export function UpdateBanner({
   onShowReleaseNotes?: (version: string) => void;
 }) {
   const t = useT();
-  const { status, check, apply, openDownload, reset } = useUpdater();
+  const { status, check, apply, openDownload, abandonPending, reset } = useUpdater();
   const [dismissed, setDismissed] = useState<string | null>(null);
 
   useEffect(() => {
@@ -79,20 +79,35 @@ export function UpdateBanner({
     case "done":
       return <div className="banner banner--update">{t("updater.done")}</div>;
     case "error": {
-      const failedMessage = t("updater.failed", { msg: status.message });
+      const failedMessage = status.disposition === "recovery"
+        ? t("updater.recoveryBlocked")
+        : status.disposition === "manual"
+          ? t("updater.manualUpdateRequired")
+          : t("updater.failed", { msg: status.message });
+      const downloadFirst = status.disposition !== "retryable";
       return (
         <div className="banner banner--update banner--error banner--actionable">
           <span className="banner__msg" title={failedMessage}>
             {failedMessage}
           </span>
           <span className="banner__spacer" />
-          {status.manualHint && (
-            <button className="btn btn--small" onClick={openDownload}>
-              {t("updater.goToDownload")}
+          {status.disposition === "recovery" && (
+            <button
+              className="btn btn--small"
+              type="button"
+              onClick={() => void abandonPending()}
+            >
+              {t("updater.discardPrevious")}
+            </button>
+          )}
+          {downloadFirst && (
+            <button className="btn btn--small btn--primary" type="button" onClick={openDownload}>
+              {t("updater.officialDownload")}
             </button>
           )}
           <button
-            className="btn btn--small btn--primary"
+            className={`btn btn--small${downloadFirst ? "" : " btn--primary"}`}
+            type="button"
             onClick={() => {
               if (status.info) apply(status.info);
               else void check();

@@ -58,6 +58,7 @@ func TestWindowsReleaseSignsPayloadBeforeRepackaging(t *testing.T) {
 		"name: Submit installer for Authenticode signing",
 		"name: Approve and download signed Windows installer",
 		"name: Replace installer with signed build",
+		"name: Checkout protected release verifier",
 		"name: Verify Windows Authenticode release contract",
 		"name: Sign artifacts (minisign)",
 	}
@@ -77,7 +78,7 @@ func TestWindowsReleaseSignsPayloadBeforeRepackaging(t *testing.T) {
 		`artifact-configuration-slug: windows-installer-v2`,
 		`path: desktop/build/windows/signing-payload/*.exe`,
 		`path: desktop/build/windows/installer-signing-bundle/*.exe`,
-		`github.repository == 'naamfung/inx'`,
+		`github.repository == 'esengine/DeepSeek-Inx'`,
 		`SIGNPATH_API_TOKEN is required for public Windows Preview and Stable releases`,
 		`SIGNPATH_RELEASE_SIGNING_ATTESTATION does not match the current protected signing contract`,
 		`signing-policy-slug: release-signing`,
@@ -92,6 +93,9 @@ func TestWindowsReleaseSignsPayloadBeforeRepackaging(t *testing.T) {
 		`go run ./cmd/sign sign ../signed-payload/inx-payload.json`,
 		`go run ./cmd/sign verify ../signed-payload/inx-payload.json`,
 		`INX_REQUIRE_PAYLOAD_MANIFEST: "1"`,
+		`ref: ${{ github.sha }}`,
+		`path: release-control`,
+		`./release-control/scripts/verify-windows-authenticode.ps1`,
 	} {
 		if !strings.Contains(workflow, want) {
 			t.Errorf("desktop release workflow is missing signing contract %q", want)
@@ -142,6 +146,10 @@ func TestWindowsReleaseSignsPayloadBeforeRepackaging(t *testing.T) {
 		"$signature.SignerCertificate",
 		"$signature.Status -ne \"Valid\"",
 		"Expand-Archive",
+		`Get-ChildItem -LiteralPath $extractRoot -Recurse -File -Filter "*.exe"`,
+		`$activeDir.Replace("\", "/") -ne "versions/$activeVersion"`,
+		`Portable = (Join-Path $activeDir "inx-desktop.exe")`,
+		`Portable = "inx-desktop.exe"`,
 		"Portable archive must contain exactly 6 executables",
 		"Get-FileHash -Algorithm SHA256",
 	} {

@@ -2,7 +2,7 @@
 -- tables. This migration is additive and idempotent: it is safe before or
 -- after deploying the surface-aware Worker, and safe to rerun.
 -- Apply with:
---   wrangler d1 execute inx-crash --remote --file=migrate-client-surface.sql
+--   wrangler d1 execute reasonix-crash --remote --file=migrate-client-surface.sql
 
 CREATE TABLE IF NOT EXISTS cli_pings (
   date TEXT NOT NULL,
@@ -35,6 +35,5 @@ CREATE TABLE IF NOT EXISTS cli_metric_users (
   PRIMARY KEY (date, signal, bucket, install_id)
 );
 
-CREATE INDEX IF NOT EXISTS cli_pings_version ON cli_pings (version);
-CREATE INDEX IF NOT EXISTS cli_metrics_signal_bucket ON cli_metrics (signal, bucket);
-CREATE INDEX IF NOT EXISTS cli_metric_users_signal_bucket ON cli_metric_users (signal, bucket);
+-- No secondary indexes here: every primary key above already leads with `date`.
+-- migrate-window-index-fix.sql explains what adding one costs.

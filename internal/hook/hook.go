@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -214,7 +215,14 @@ func ContextFileUsable(path string) bool {
 // LoadOptions configure Load.
 type LoadOptions struct {
 	ProjectRoot string
-	HomeDir     string
+	// HomeDir overrides the OS user home used by legacy callers and tests. The
+	// derived global path is <HomeDir>/.inx unless InxHomeDir is set.
+	HomeDir string
+	// InxHomeDir is the exact current Inx home (settings.json lives
+	// directly under it). When set, it takes precedence over HomeDir for global
+	// settings and plugin hooks so Windows %APPDATA%/inx and INX_HOME
+	// isolation stay consistent across hook/doctor/capdiag (#7411, #7331).
+	InxHomeDir string
 	// Trusted is retained for source compatibility. Project hooks are enabled
 	// automatically now, so callers no longer need to set it.
 	Trusted bool
@@ -231,8 +239,12 @@ func Load(opts LoadOptions) []ResolvedHook {
 			appendResolved(&out, s, ScopeProject, p)
 		}
 	}
-	appendPluginHooks(&out, inxHome(opts.HomeDir), opts.ProjectRoot)
-	g := GlobalSettingsPath(opts.HomeDir)
+	inxHomeDir := inxHomeForOptions(opts)
+	appendPluginHooks(&out, inxHomeDir, opts.ProjectRoot)
+	g := filepath.Join(inxHomeDir, SettingsFilename)
+	if inxHomeDir == "" {
+		g = GlobalSettingsPath(opts.HomeDir)
+	}
 	if s := readSettings(g); s != nil {
 		appendResolved(&out, s, ScopeGlobal, g)
 	} else if !pathExists(g) {
@@ -355,7 +367,7 @@ func appendPluginHooks(out *[]ResolvedHook, inxHomeDir, projectRoot string) {
 						Command:       execution.Command,
 						Argv:          execution.Argv,
 						ExecutionMode: execution.ExecutionMode,
-						Shell:         h.Shell,
+						Shell:         execution.Shell,
 						ContextFile:   contextFile,
 						Description:   h.Description,
 						Timeout:       h.Timeout,
@@ -385,32 +397,7 @@ func pluginHookExecutionConfigForPlatform(h pluginpkg.Hook, root, goos string) H
 	case h.ShellCommand:
 		mode = ExecutionShell
 	}
-	expansionRoot := root
-	if goos == "windows" && mode == ExecutionShell && strings.EqualFold(strings.TrimSpace(h.Shell), "bash") {
-		expansionRoot = strings.ReplaceAll(root, `\`, "/")
-	}
-	command := expandPluginRoot(h.Command, expansionRoot)
-	resolveFromPluginRoot := mode != ExecutionShell &&
-		!(mode == ExecutionExec && h.PayloadFormat == "claude")
-	if command != "" && resolveFromPluginRoot && !filepath.IsAbs(command) {
-		command = filepath.Join(root, filepath.FromSlash(command))
-	}
-	if mode == ExecutionLegacy {
-		command = NormalizeCommand(command)
-	}
-	var argv []string
-	if h.ArgsSet {
-		argv = make([]string, 0, len(h.Args))
-	}
-	for _, arg := range h.Args {
-		argv = append(argv, expandPluginRoot(arg, root))
-	}
-	return HookConfig{
-		Command:       command,
-		Argv:          argv,
-		ExecutionMode: mode,
-		Shell:         h.Shell,
-	}
+	return completePluginHookExecutionConfig(h, root, goos, mode)
 }
 
 func expandPluginRoot(value, root string) string {
@@ -472,12 +459,7 @@ func isShellVariableNameByte(c byte) bool {
 }
 
 func validEvent(event Event) bool {
-	for _, e := range Events {
-		if e == event {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(Events, event)
 }
 
 func cloneEnv(in map[string]string) map[string]string {
@@ -508,12 +490,7 @@ func MatchesTool(h ResolvedHook, toolName string) bool {
 	if h.PayloadFormat != "claude" {
 		return re.MatchString(toolName)
 	}
-	for _, candidate := range claudeMatchNames(toolName) {
-		if re.MatchString(candidate) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(claudeMatchNames(toolName), re.MatchString)
 }
 
 // claudeAgentSpawningTools are every Inx tool that spawns a subagent and
@@ -1295,6 +1272,7 @@ func NewDefaultSpawner(options RuntimeOptions) Spawner {
 }
 
 func defaultSpawner(ctx context.Context, in SpawnInput, options RuntimeOptions) SpawnResult {
+	in = normalizeWindowsHookSpawnInputForPlatform(in, runtime.GOOS)
 	cctx, cancel := context.WithTimeout(ctx, in.Timeout)
 	defer cancel()
 
@@ -1403,9 +1381,7 @@ func spawnLegacyCommand(ctx context.Context, command string, args []string, opti
 		return exec.CommandContext(ctx, node, flag, script), nil
 	}
 	if powershell, args, ok := repairablePowerShellFileArgs(command); ok {
-		cmd := exec.CommandContext(ctx, powershell, args...)
-		proc.HideWindow(cmd)
-		return cmd, nil
+		return exec.CommandContext(ctx, powershell, args...), nil
 	}
 	if runtime.GOOS == "windows" {
 		if cmd, matched := windowsBatchCommand(ctx, command); matched {
@@ -1491,20 +1467,7 @@ func checkRuntimeForPlatform(config HookConfig, options RuntimeOptions, goos str
 }
 
 func requiresWindowsBash(config HookConfig) bool {
-	switch config.ExecutionMode {
-	case ExecutionShell:
-		return strings.EqualFold(strings.TrimSpace(config.Shell), "bash")
-	case ExecutionExec:
-		return isBarePOSIXShellWord(config.Command) && hasCommandStringFlag(config.Argv)
-	case ExecutionLegacy:
-		if config.Argv != nil {
-			return isBarePOSIXShellWord(config.Command) && hasCommandStringFlag(config.Argv)
-		}
-		fields, _, _, ok := parseSimpleHookCommandFields(config.Command)
-		return ok && len(fields) >= 3 && isBarePOSIXShellWord(fields[0]) && hasCommandStringFlag(fields[1:])
-	default:
-		return false
-	}
+	return requiresWindowsBashForHook(config)
 }
 
 func rawShellCommand(ctx context.Context, sh sandbox.Shell, command string) (*exec.Cmd, error) {
@@ -1533,9 +1496,7 @@ func powerShellCommand(ctx context.Context, path, command string) *exec.Cmd {
 		raw[i*2+1] = byte(unit >> 8)
 	}
 	encoded := base64.StdEncoding.EncodeToString(raw)
-	cmd := exec.CommandContext(ctx, path, "-NoProfile", "-NonInteractive", "-EncodedCommand", encoded)
-	proc.HideWindow(cmd)
-	return cmd
+	return exec.CommandContext(ctx, path, "-NoProfile", "-NonInteractive", "-EncodedCommand", encoded)
 }
 
 func shellInvocation(command string) (string, []string) {
@@ -1582,6 +1543,13 @@ func inxHome(override string) string {
 		return filepath.Join(h, SettingsDirname)
 	}
 	return ""
+}
+
+func inxHomeForOptions(opts LoadOptions) string {
+	if dir := strings.TrimSpace(opts.InxHomeDir); dir != "" {
+		return filepath.Clean(dir)
+	}
+	return inxHome(opts.HomeDir)
 }
 
 func legacyGlobalSettingsPath(homeDir string) string {

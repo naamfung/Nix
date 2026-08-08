@@ -31,7 +31,7 @@ func TestLockUserConfigEditsSerializesRMW(t *testing.T) {
 
 	const writers = 8
 	var wg sync.WaitGroup
-	for i := 0; i < writers; i++ {
+	for i := range writers {
 		wg.Add(1)
 		go func(n int) {
 			defer wg.Done()
@@ -201,7 +201,7 @@ func assertUserConfigLockSerializesAcrossProcesses(t *testing.T, firstHome, seco
 		t.Helper()
 		cmd := exec.Command(os.Args[0], "-test.run=^TestLockUserConfigEditsHelperProcess$")
 		cmd.Env = testEnvWithOverrides(map[string]string{
-			"TMPDIR":                   processTmp,
+			"TMPDIR":                        processTmp,
 			"INX_HOME":                 processHome,
 			"INX_CONFIG_LOCK_HELPER":   "1",
 			"INX_CONFIG_LOCK_MODE":     mode,

@@ -1,9 +1,6 @@
 package builtin
 
 import (
-	"fmt"
-	"io/fs"
-	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -11,6 +8,7 @@ import (
 
 	"inx/internal/netclient"
 	"inx/internal/sandbox"
+	"inx/internal/sessiontemp"
 	"inx/internal/tool"
 )
 
@@ -42,12 +40,16 @@ type Workspace struct {
 	// touch outside WriteRoots after a fresh per-write human approval (see
 	// ManagedConfigPaths). The zero value disables the escape hatch.
 	ManagedConfig ManagedConfigPaths
-	// FileOverlay, when non-nil, serves read_file/write_file content through the
+	// FileOverlay, when non-nil, serves every file tool's content through the
 	// host transport (unsaved editor buffers) with disk fallback; Terminal, when
 	// non-nil, runs foreground bash in a host-owned terminal when the local OS
 	// sandbox is not enforcing. Both are nil outside host transports like ACP.
 	FileOverlay FileOverlay
 	Terminal    TerminalRunner
+	// SessionTemp is the logical-session private temporary directory manager
+	// shared by bash and ripgrep-backed grep. Nil leaves those tools without a
+	// session-private temp (platform defaults apply).
+	SessionTemp *sessiontemp.Manager
 }
 
 // Tools returns the built-in tools bound to the workspace, ready to Add to a
@@ -66,17 +68,17 @@ func (w Workspace) Tools(enabled ...string) []tool.Tool {
 	overrides := map[string]tool.Tool{
 		"read_file":     readFile{workDir: w.Dir, paths: w.ReadPaths, forbidRoots: forbidRoots, overlay: w.FileOverlay},
 		"write_file":    writeFile{workDir: w.Dir, roots: roots, guard: w.SessionGuard, managed: w.ManagedConfig, overlay: w.FileOverlay},
-		"edit_file":     editFile{workDir: w.Dir, roots: roots, guard: w.SessionGuard, managed: w.ManagedConfig},
-		"multi_edit":    multiEdit{workDir: w.Dir, roots: roots, guard: w.SessionGuard, managed: w.ManagedConfig},
+		"edit_file":     editFile{workDir: w.Dir, roots: roots, guard: w.SessionGuard, managed: w.ManagedConfig, overlay: w.FileOverlay},
+		"multi_edit":    multiEdit{workDir: w.Dir, roots: roots, guard: w.SessionGuard, managed: w.ManagedConfig, overlay: w.FileOverlay},
 		"move_file":     moveFile{workDir: w.Dir, roots: roots, guard: w.SessionGuard, managed: w.ManagedConfig},
-		"notebook_edit": notebookEdit{workDir: w.Dir, roots: roots, guard: w.SessionGuard, managed: w.ManagedConfig},
-		"delete_range":  deleteRange{workDir: w.Dir, roots: roots, guard: w.SessionGuard, managed: w.ManagedConfig},
-		"delete_symbol": deleteSymbol{workDir: w.Dir, roots: roots, guard: w.SessionGuard, managed: w.ManagedConfig},
+		"notebook_edit": notebookEdit{workDir: w.Dir, roots: roots, guard: w.SessionGuard, managed: w.ManagedConfig, overlay: w.FileOverlay},
+		"delete_range":  deleteRange{workDir: w.Dir, roots: roots, guard: w.SessionGuard, managed: w.ManagedConfig, overlay: w.FileOverlay},
+		"delete_symbol": deleteSymbol{workDir: w.Dir, roots: roots, guard: w.SessionGuard, managed: w.ManagedConfig, overlay: w.FileOverlay},
 		"code_index":    codeIndex{workDir: w.Dir, forbidRoots: forbidRoots},
-		"bash":          bash{workDir: w.Dir, sb: w.Bash, timeout: w.BashTimeout, guard: w.SessionGuard, terminal: w.Terminal},
+		"bash":          bash{workDir: w.Dir, sb: w.Bash, timeout: w.BashTimeout, guard: w.SessionGuard, terminal: w.Terminal, sessionTemp: w.SessionTemp},
 		"ls":            listDir{workDir: w.Dir, paths: w.ReadPaths, forbidRoots: forbidRoots},
 		"glob":          globTool{workDir: w.Dir, paths: w.ReadPaths, forbidRoots: forbidRoots},
-		"grep":          grepTool{workDir: w.Dir, paths: w.ReadPaths, rg: w.Search.RgPath, forbidRoots: forbidRoots, sb: w.Bash},
+		"grep":          grepTool{workDir: w.Dir, paths: w.ReadPaths, rg: w.Search.RgPath, forbidRoots: forbidRoots, sb: w.Bash, sessionTemp: w.SessionTemp},
 		"web_fetch":     webFetch{proxySpec: w.ProxySpec},
 	}
 	all := tool.Builtins()
@@ -283,160 +285,4 @@ func skipWalkDir(root, path, name string) bool {
 // absolute paths; empty means unconfined.
 func skipForbidDir(path string, forbidRoots []string) bool {
 	return confineRead(forbidRoots, path)
-}
-
-// tryWinPathVariants returns a list of path variants to try when a Windows path
-// fails under a Unix-style shell environment. It includes the original path,
-// the forward-slash version, and the /drive/ version.
-func tryWinPathVariants(original string) []string {
-	var tries []string
-	tries = append(tries, original)
-
-	if isWindowsAbsPath(original) {
-		// Try with forward slashes
-		fwd := filepath.ToSlash(original)
-		if fwd != original {
-			tries = append(tries, fwd)
-		}
-
-		// Try with /drive/ format
-		// e.g., D:\foo\bar -> /D/foo/bar
-		drive := strings.ToUpper(string(original[0]))
-		rest := original[2:] // skip "X:"
-		if len(rest) > 0 && (rest[0] == '\\' || rest[0] == '/') {
-			rest = filepath.ToSlash(rest)
-			// filepath.ToSlash("\foo\bar") returns "/foo/bar"
-			tries = append(tries, "/"+drive+rest)
-		} else {
-			// No leading slash after drive letter, e.g., C:foo
-			rest = filepath.ToSlash(rest)
-			tries = append(tries, "/"+drive+":"+rest)
-		}
-	}
-
-	// Remove duplicates
-	seen := make(map[string]bool)
-	var unique []string
-	for _, t := range tries {
-		if !seen[t] {
-			seen[t] = true
-			unique = append(unique, t)
-		}
-	}
-	return unique
-}
-
-func isWindowsAbsPath(p string) bool {
-	if len(p) >= 2 && p[1] == ':' {
-		drive := strings.ToUpper(string(p[0]))
-		if drive >= "A" && drive <= "Z" {
-			if len(p) == 2 {
-				return true // "C:"
-			}
-			if len(p) > 2 {
-				return p[2] == '\\' || p[2] == '/'
-			}
-		}
-	}
-	return false
-}
-
-// tryOpenPathVariants tries to open files using a list of path variants.
-// It returns the first successful *os.File, the path that was opened, and nil error.
-// If all attempts fail, it returns nil, "", and an error that reports the
-// original path (not the last variant tried) and diagnoses a missing file vs a
-// missing directory (see enrichPathError).
-func tryOpenPathVariants(variants []string) (*os.File, string, error) {
-	var lastErr error
-	for _, v := range variants {
-		f, err := os.Open(v)
-		if err == nil {
-			return f, v, nil
-		}
-		lastErr = err
-	}
-	if len(variants) == 0 {
-		return nil, "", lastErr
-	}
-	return nil, "", enrichPathError("open", variants[0], lastErr)
-}
-
-// enrichPathError rewrites a failed open so the model sees the caller's
-// original path — not the last variant a Unix-style shell conversion tried —
-// and can tell a wrong filename from a wrong directory: when the parent
-// directory exists the missing file is the problem; when it does not, the
-// nearest existing ancestor names the first wrong path segment. A not-exist
-// cause stays detectable via errors.Is(err, fs.ErrNotExist) so callers that
-// treat a missing file as a create (e.g. write_file preview) keep working.
-// Non-not-exist failures (permission, ...) keep their original cause but also
-// report the original path instead of the last variant.
-func enrichPathError(op, original string, lastErr error) error {
-	if !os.IsNotExist(lastErr) {
-		return &os.PathError{Op: op, Path: original, Err: lastErr}
-	}
-	dir := filepath.Dir(original)
-	fi, err := os.Stat(dir)
-	switch {
-	case err == nil && fi.IsDir():
-		return pathNotExistError(op, original, fmt.Sprintf("no such file — directory %q exists, check the filename", dir))
-	case err == nil:
-		return pathNotExistError(op, original, fmt.Sprintf("parent %q is a file, not a directory", dir))
-	case os.IsNotExist(err):
-		if anc, missing := nearestExistingAncestor(dir); anc != "" {
-			return pathNotExistError(op, original, fmt.Sprintf("no such directory — nearest existing ancestor is %q, so %q does not exist", anc, missing))
-		}
-		return pathNotExistError(op, original, fmt.Sprintf("no such directory — %q does not exist", dir))
-	default:
-		// The parent stat failed for an unrelated reason; report the original error.
-		return &os.PathError{Op: op, Path: original, Err: lastErr}
-	}
-}
-
-// pathNotExistError reports a missing path while keeping fs.ErrNotExist in the
-// error chain, so errors.Is(err, fs.ErrNotExist) still classifies it as a
-// not-exist failure no matter how the message is enriched.
-func pathNotExistError(op, path, diag string) error {
-	return &os.PathError{Op: op, Path: path, Err: notExistError{diag}}
-}
-
-type notExistError struct{ diag string }
-
-func (e notExistError) Error() string { return e.diag }
-func (e notExistError) Unwrap() error { return fs.ErrNotExist }
-
-// nearestExistingAncestor walks dir toward the root until an existing path is
-// found; it returns that path plus the shallowest missing segment below it,
-// i.e. the first path segment that does not exist.
-func nearestExistingAncestor(dir string) (existing, missing string) {
-	for {
-		if _, err := os.Stat(dir); err == nil {
-			return dir, missing
-		}
-		if missing == "" || len(dir) < len(missing) {
-			missing = dir
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			return "", missing
-		}
-		dir = parent
-	}
-}
-
-// tryMkdirAllVariants tries to create directories using a list of path variants.
-// It returns the first successful variant path, or the last error if all fail.
-func tryMkdirAllVariants(variants []string) (string, error) {
-	var lastErr error
-	for _, v := range variants {
-		dir := filepath.Dir(v)
-		if dir == "" || dir == "." {
-			return v, nil
-		}
-		err := os.MkdirAll(dir, 0o755)
-		if err == nil {
-			return v, nil
-		}
-		lastErr = err
-	}
-	return "", lastErr
 }

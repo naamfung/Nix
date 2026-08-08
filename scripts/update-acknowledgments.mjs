@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 import { readFile, writeFile } from 'node:fs/promises';
 
-const repo = 'naamfung/inx';
+const repo = 'esengine/DeepSeek-Reasonix';
 const api = `https://api.github.com/repos/${repo}/contributors?per_page=20&anon=1`;
-const startMarker = '<!-- inx-top-contributors:start -->';
-const endMarker = '<!-- inx-top-contributors:end -->';
+const startMarker = '<!-- reasonix-top-contributors:start -->';
+const endMarker = '<!-- reasonix-top-contributors:end -->';
 
 const headers = {
   Accept: 'application/vnd.github+json',
-  'User-Agent': 'inx-acknowledgments-updater',
+  'User-Agent': 'reasonix-acknowledgments-updater',
 };
 if (process.env.GITHUB_TOKEN) {
   headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;

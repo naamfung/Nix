@@ -3,8 +3,8 @@
 package notify
 
 import (
-	"inx/internal/secrets"
 	"os/exec"
+	"inx/internal/secrets"
 	"strings"
 )
 

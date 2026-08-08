@@ -14,7 +14,6 @@ import (
 	"testing"
 	"time"
 
-	"inx/internal/proc"
 	"inx/internal/sandbox"
 )
 
@@ -27,7 +26,7 @@ func TestBashCancelKillsWindowsChildProcessTree(t *testing.T) {
 	pidFile := filepath.Join(tmp, "child.pid")
 	quotedPIDFile := strings.ReplaceAll(pidFile, "'", "''")
 	command := fmt.Sprintf(
-		"$p = Start-Process -FilePath powershell -ArgumentList '-NoProfile','-NonInteractive','-Command','Start-Sleep -Seconds 120' -WindowStyle Hidden -PassThru; "+
+		"$p = Start-Process -FilePath powershell -ArgumentList '-NoProfile','-NonInteractive','-Command','Start-Sleep -Seconds 120' -PassThru; "+
 			"Set-Content -LiteralPath '%s' -Value $p.Id; "+
 			"Start-Sleep -Seconds 120",
 		quotedPIDFile,
@@ -55,7 +54,7 @@ func TestBashCancelKillsWindowsChildProcessTree(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected cancel to return an error")
 	}
-	for i := 0; i < 50; i++ {
+	for range 50 {
 		if !windowsProcessAlive(childPID) {
 			return
 		}
@@ -74,7 +73,7 @@ func TestBashWindowsReapsChildAfterForegroundShellExit(t *testing.T) {
 	pidFile := filepath.Join(tmp, "child.pid")
 	quotedPIDFile := strings.ReplaceAll(pidFile, "'", "''")
 	command := fmt.Sprintf(
-		"$p = Start-Process -FilePath powershell -ArgumentList '-NoProfile','-NonInteractive','-Command','Start-Sleep -Seconds 120' -WindowStyle Hidden -PassThru; "+
+		"$p = Start-Process -FilePath powershell -ArgumentList '-NoProfile','-NonInteractive','-Command','Start-Sleep -Seconds 120' -PassThru; "+
 			"Set-Content -LiteralPath '%s' -Value $p.Id",
 		quotedPIDFile,
 	)
@@ -88,7 +87,7 @@ func TestBashWindowsReapsChildAfterForegroundShellExit(t *testing.T) {
 		killWindowsPID(childPID)
 		t.Fatalf("foreground command failed: %v (out=%q)", err, out)
 	}
-	for i := 0; i < 50; i++ {
+	for range 50 {
 		if !windowsProcessAlive(childPID) {
 			return
 		}
@@ -130,7 +129,7 @@ func TestBashCancelKillsGitBashHereDocPython(t *testing.T) {
 		killWindowsPID(childPID)
 		t.Fatal("cancel did not interrupt Git Bash here-doc python within 20s")
 	}
-	for i := 0; i < 50; i++ {
+	for range 50 {
 		if !windowsProcessAlive(childPID) {
 			return
 		}
@@ -193,7 +192,6 @@ func shellQuote(s string) string {
 
 func windowsProcessAlive(pid int) bool {
 	cmd := exec.Command("powershell", "-NoProfile", "-NonInteractive", "-Command", fmt.Sprintf("if (Get-Process -Id %d -ErrorAction SilentlyContinue) { exit 0 } else { exit 1 }", pid))
-	proc.HideWindow(cmd)
 	return cmd.Run() == nil
 }
 

@@ -25,6 +25,7 @@
 - [能力诊断](#能力诊断)
 - [插件（MCP）](#插件mcp)
 - [斜杠命令](#斜杠命令)
+- [内置文档检索](#内置文档检索)
 - [@ 引用](#-引用)
 - [双模型协同](#双模型协同)
 
@@ -50,6 +51,7 @@ default_model = "deepseek-flash"   # 执行器；设 [agent].planner_model 可�
 [ui]
 # shortcut_layout = "desktop"      # classic|desktop；兼容旧配置
 # cursor_shape = "bar"             # block|underline|bar；CLI/TUI 输入光标
+show_turn_usage = false             # 隐藏 TUI 每轮 token/费用回执；默认 true
 
 [agent]
 reasoning_language = "auto"      # 可见思考过程语言：auto|zh|en
@@ -78,6 +80,7 @@ mcp_call_timeout_seconds = 300   # MCP 调用默认安全上限；可用 plugin/
 
 [environment]
 enabled = true   # 启动时把 OS、shell 和常见工具摘要稳定注入 prompt
+offline = false  # 无出站网络时设为 true，避免 agent 无效重试网络请求
 # [environment.tools]
 # go = "/opt/homebrew/bin/go"   # 可选：显式可信路径；workspace 内路径不会在启动时自动执行
 
@@ -129,23 +132,24 @@ bash allowlist 或信任提示。Plan 与常规模式使用相同的 Permissions
 ### CLI 上报统计
 
 CLI 可以向 `https://crash.inx.io` 发送每日最多一次的匿名活跃安装 ping，
-以及有界、完全不含内容的事件计数。本分支中 telemetry **默认关闭**：
-全新安装不会询问，也不会发送任何内容，除非你显式开启。使用以下用户全局命令配置：
+以及有界、完全不含内容的事件计数。使用以下用户全局命令配置：
 
 ```bash
 inx config telemetry          # 查看当前生效模式
-inx config telemetry auto     # 仅本机交互式 TTY
+inx config telemetry auto     # 默认：仅本机交互式 TTY
 inx config telemetry on       # 也允许本机 headless `inx run`
 inx config telemetry off      # 关闭并删除待发送计数文件
 ```
 
-默认值为 `off`，不存在首次运行的同意提示。使用 `auto` 或 `on` 显式开启后，
-允许的上报保持静默。
+正式版 CLI 第一次在符合条件的交互式终端启动时，会先明确说明数据边界，并在任何
+telemetry 请求之前只询问一次。提示为 `[Y/n]`：直接回车、输入 `y` 或 `yes` 会保存为
+`auto`；输入 `n` 或 `no` 会保存为 `off` 并删除待发送计数。选择保存后不再提示，允许的
+后续上报保持静默。如果偏好设置保存失败，则不会上传任何内容。
 
 在 CI、开发构建中始终关闭；设置 `DO_NOT_TRACK` 或
 `INX_TELEMETRY=0` 也会关闭。`auto` 模式下，重定向、pipe 或其他非交互会话
-不会上报。尚未保存选择时，会话既不会提示，也不会上报。网络失败完全静默，
-不会改变 stdout、stderr 或进程退出码；未发送计数只会保存在有
+不会上报。尚未保存选择时，这些不符合条件的会话既不会提示，也不会上报。授权后的
+网络失败完全静默，不会改变 stdout、stderr 或进程退出码；未发送计数只会保存在有
 数量和时效上限的本地队列中，等待后续启动重试。
 
 ping 包含一个 CLI 专用的随机 128-bit 安装 ID、CLI 版本、OS、架构和 `cli` surface
@@ -213,9 +217,17 @@ behind_proxy = true    # 仅可信反向代理后方使用
 ```
 
 Web UI 提供聊天、工具审批、会话历史、rewind/fork/summarize、模型与 reasoning effort 控件、
-Goal、由 `todo_write` 工具驱动的实时 Todo 面板，以及已配置 provider 的余额显示。临时启动可用
+Goal、由 `todo_write` 工具驱动的实时 Todo 面板、扩展发布的 status/card/form/notification
+界面，以及已配置 provider 的余额显示。扩展提供的模型也会进入模型选择器。空闲时运行
+`/reload` 可在不重启 Serve 的情况下，以失败原子方式重载扩展 Sidecar 和运行时 generation。临时启动可用
 `--model`、`--max-steps` 或 `--resume`；不传 `--model` 时，`serve` 使用用户全局
 `default_model`。
+
+如果当前 Provider 尚未保存 API Key，绑定在回环地址的 Serve 仍会启动，并先显示 Provider
+配置页，而不是在浏览器连接前直接失败。通过 Serve 认证后可在该页输入 Key；Inx 会以受限
+权限写入**当前主机**的全局凭据文件，在同一进程内重建 Controller，然后进入正常 Web UI。
+凭据写入接口在非回环监听器上始终禁用。对于 SSH 远程窗口，“当前主机”指经 SSH 隧道访问的
+远端主机；Key 不会从桌面本机自动复制过去。
 
 ## 通过 ACP 接入编辑器
 
@@ -282,7 +294,11 @@ inx remote fs ls gpu-box:'~/projects/app'
 在桌面端,于 **设置 -> 远程 SSH** 管理主机,再通过状态栏徽标或主机行的 **远程浏览器** 按钮经
 SFTP 浏览与编辑文件、管理端口转发、启动/打开远程工作区。打开工作区时会创建一个类似 VS Code
 Remote SSH 的独立 Inx 原生窗口。主窗口持有 SSH 隧道；远程窗口是隔离的轻量外壳，不会恢复
-或抢占本地对话会话。
+或抢占本地对话会话。远程网页使用**远端**主机上的 Provider 配置与 API Key —— 桌面端绝不会把
+本机 Provider 暴露给远端主机。如果远端缺少当前 Provider 的 API Key，窗口会先显示经过认证的
+配置页，只把 Key 保存到远端 Inx 凭据文件，并在不重启远端 Serve 的情况下激活 Provider。
+短暂的 SSH 中断不会关闭远程窗口；桌面端会在后台重连、重新挂载回环转发，并让窗口重新加载已恢复的
+Serve。认证失败或主机密钥错误属于终止性故障，此时会关闭已经不可用的远程窗口。
 
 ## 自定义 OpenAI-compatible provider
 
@@ -535,6 +551,35 @@ Sandbox 是授权之后的第二层边界，不能替代命令解析，也不能
 OS 沙盒生效时也不能读取配置的 `forbid_read` roots，`[sandbox] network` 为真时才能联网。
 Inx 始终会从工具子进程环境中移除已保存的 provider 与 bot 凭据变量，并自动把
 全局凭据 `.env` 加入运行时禁读边界；项目 `.env` 仍保持现有的 workspace 范围行为。
+
+**会话私有标准临时目录。**同一逻辑会话内的多条 Bash 命令共享一个私有临时目录，
+因此连续调用可以通过 `$TMPDIR` 交换文件（在 Linux bubblewrap 下还可以通过字面
+`/tmp`）。用户不需要设置：Inx 会自动为 Bash 和客户端托管的 ACP 终端注入
+`TMPDIR`、`TMP`、`TEMP`。目录按需创建，不会回退到宿主公共临时目录；在 `/new`、
+`/clear`、恢复另一会话、切换分支时旋转。模型或设置热重建会保留同一目录。临时文件
+不是持久存储：跨进程 resume 不会恢复其中内容；需要长期保留的数据应写入工作区或
+用户指定路径。
+
+Inx 生成的脚本和项目脚本应使用标准临时目录变量，不要硬编码 `/tmp`；用户无需
+自行设置这些变量。例如：
+
+```sh
+tmp_file="${TMPDIR:?}/result.json"
+```
+
+```powershell
+$tmpFile = Join-Path $env:TEMP "result.json"
+```
+
+| 平台 | `$TMPDIR` / `$TMP` / `$TEMP` | 字面 `/tmp` |
+| --- | --- | --- |
+| Linux + bubblewrap | 虚拟 `/tmp`（绑定到私有目录） | 会话内共享（不再是每次新建的空 tmpfs） |
+| macOS Seatbelt | 私有宿主目录路径（Seatbelt 允许写入） | 仍是 macOS 宿主临时目录；脚本应使用 `$TMPDIR` |
+| Windows（无 OS 级 Bash 沙箱） | 私有宿主目录路径 | 不保证与该目录等价（例如 Git Bash 的 `/tmp`） |
+
+MCP 等独立沙盒继续使用自己的隔离规范，不继承父会话临时目录。获得批准后绕过沙盒的
+命令仍继承私有临时变量，但在 Linux 上其字面 `/tmp` 不再由 bwrap 映射。
+
 **Windows 说明：**Inx 不在 Windows 上提供 OS 级 Bash 沙箱，生效模式固定为
 `off`。旧配置即使写了 `bash = "enforce"` 也会解析为 `off`，`inx doctor`
 会提示该设置被忽略，桌面设置中的选择器也为只读。Bash 命令会在不受 OS 沙箱限制的
@@ -771,13 +816,52 @@ Review the staged diff. Focus on $ARGUMENTS, list bugs with file:line.
 `$ARGUMENTS` 展开为全部空格分隔参数，`$1`…`$N` 为位置参数。MCP prompts 也以
 `/mcp__<server>__<prompt>` 形式出现在这里。
 
+## 内置文档检索
+
+Inx 会把 `docs/` 中的 Markdown 文档和已审查的 `release-notes/releases.json` 更新日志
+目录随 CLI 和桌面端一起编译发布。只读 `docs` 工具通过本地 BM25 检索这份与当前安装版本
+完全一致的离线语料，并可按命中的 `section_id` 读取完整章节及来源。每个版本都会生成
+`changelog/v1.19.5.md`、`changelog/v1.19.5.zh-CN.md` 这类中英文虚拟文档，因此可以离线
+查询指定版本的新增功能、升级说明、修复和已知风险。涉及 Inx 配置、CLI/桌面端行为、
+版本历史、权限、MCP、记忆、恢复、Provider 或维护流程的问题，Agent 应先查询这里，再考虑
+联网搜索或凭经验回答。
+
+普通路径不需要设置、联网、向量数据库或 embedding 服务。搜索会优先匹配提问语言，同时支持
+显式 `en`、`zh-CN`、受众和目录筛选。Balanced 与 Delivery 默认暴露该工具；Economy 会在需要时
+按需连接 `docs` 来源。每次返回都会给出产品版本、不可变源码 revision 与语料 SHA-256 digest。
+发布 CI 会实际编译 CLI；只有编译后的清单与候选提交的 `docs/*.md`、
+`release-notes/releases.json` 和构建身份完全一致时才允许发布。因此，更新较快的在线
+`main-v2` 页面不会静默覆盖与本地版本匹配的说明或更新历史。
+
+直接输入 `/docs` 会在本地显示内置语料的版本、revision、digest 和使用示例，不调用模型。
+输入 `/docs <问题>`（例如 `/docs 1.19.5 更新日志`）时，Inx 会先在本地完成检索，再把
+与当前版本匹配的证据交给当前配置的 AI 生成带来源的回答。这个命令路径不依赖模型是否主动
+选择 `docs` 工具；普通自然语言问题仍可由模型自动调用该工具。已有自定义命令以及兼容插件或
+Skill 别名会继续拥有 `/docs`；发生冲突时，CLI 与桌面端通常会改为通过 `/inx:docs` 暴露
+内置语料。如果这个限定名也已被占用，Inx 会选择下一个空闲的 `inx:` 限定后备名，
+不会覆盖原命令。远程桌面端使用主机解析后的命令目录，因此菜单显示的入口与主机实际执行目标
+保持一致。
+
+如果 Pull Request 修改了用户可见的 CLI、桌面端、配置、Provider、权限或工具行为，必须声明
+是否已同步更新内置文档；如果无需更新，则必须说明现有的版本匹配说明为何仍然正确。
+
 ## Goal 与 AutoResearch
 
 Goal 是长期目标的统一运行机制。普通 `/goal` 继续走轻量 Goal：Inx 会持续推进，直到
-完成、阻塞或被清除。对于明显长周期的目标，Goal 会自动进入 AutoResearch 策略，而不是
+完成、阻塞、暂停或被清除。对于明显长周期的目标，Goal 会自动进入 AutoResearch 策略，而不是
 要求用户单独运行 `/auto-research` skill；`auto-research` 也不会作为独立 builtin skill 出现在
 Settings -> Skills 或斜杠菜单里。普通聊天不会隐式改变协作模式；需要长目标时，请在输入框中
 明确选择 Goal，或使用 `/goal` 启动。
+
+Goal 按类别运行在**轮次**预算内：简单目标 10 轮，写入型 20 轮，AutoResearch 40 轮；
+连续 4 轮没有宿主可验证进展会暂停。累计 token 仍会统计并展示（便于诊断），但**没有
+token 硬上限**，也不会在 provider 请求前做 token 准入拦截。Goal 中只陈述 BUG/崩溃/异常
+且未要求分析或禁止修改时，默认按写入型轮数类别。暂停会保留 Goal、todo、Delivery
+checkpoint 与运行历史——用 `/goal resume` 继续（轮次型暂停会追加一档同类别轮数），
+`/goal pause` 可手动暂停运行中的目标，`/goal status` 显示完整的轮次/累计 token/无进展
+运行摘要。每个目标 turn 结束时，模型通过结构化的 `update_goal` 工具报告
+continue/complete/blocked；没有报告时由独立的有界 evaluator 判定一次，任何 evaluator
+故障都会安全暂停目标而不是静默继续。
 
 复杂任务建议把目标写成[任务合约](./TASK_CONTRACT.zh-CN.md)：Context、Request、
 Output format、Constraints 和 Pause policy。Goal 模式会把这些部分当作自主执行的边界；
@@ -889,6 +973,12 @@ destructive MCP 目标、来自未授权 server 的 reader，以及一切会改�
 | `inx review`（CLI） | 只读评审 diff 或分支 |
 | 桌面端 preview/review 子代理 | 桌面端只读分析面 |
 
+在持久化会话中，`parallel_tasks` 与 `fleet` 不再把所有完整答案拼成一个容易被截断的
+工具结果，而是为每个已完成子 Agent 返回有界预览和独立的 `Subagent reference`。父 Agent
+可用 `read_subagent_result` 按 `offset_bytes` 分页读取该引用对应的完整答案；读取范围受当前
+会话 lineage 与工作区约束。没有持久化父会话的 headless 运行仍保持 ephemeral，只返回公平
+分配的有界预览，不能生成持久引用。
+
 交互式双模型 Planner 使用专用构造路径（`NewPlannerAgent`）：仍阻止 bash、文件写入与普通
 writer，但可通过固定的 `use_capability` 代理调用已授权、非 destructive 的 MCP，不再要求
 `readOnlyHint`。直接 `mcp__*` schema 永不进入 Planner 工具列表，因此 MCP 安装/连接变动
@@ -914,7 +1004,8 @@ server 无法在这里提升权限。严格只读边界比独立 Planner 更窄�
 
 启动会话时可以用 `--profile economy|balanced|delivery` 选择运行模式，例如
 `inx run --profile delivery "修复并验证这个 bug"`。Economy（轻量）初始只带 9 个工具：
-直接读/bash/编辑/写入、后台 shell 生命周期控制、`ask` 和 `connect_tool_source`；专用搜索/文件/
+直接读/bash/编辑/写入、后台 shell 生命周期控制、`ask` 和 `connect_tool_source`；内置文档、
+专用搜索/文件/
 workflow 工具、session history、memory 写入、slash command、Skills、MCP、LSP、网络、安装与
 subagent 都在任务需要时才连接。
 Balanced（均衡）是提供完整工具面的默认档；配置独立 Planner 时，Planner 与 Executor 都会获得各自的

@@ -106,6 +106,24 @@ In an interactive session, `/currency` shows the saved and resolved values, and
 `/currency auto|CNY|USD` changes the preference and refreshes the current
 runtime without discarding the conversation.
 
+### Configure automatic compaction
+
+The desktop app and CLI share the user-global automatic compaction threshold.
+Inspect the effective percentage and its source, set the global default, or add
+a project override:
+
+```sh
+inx config compact-ratio              # show effective value and source
+inx config compact-ratio 75           # set the user-global default
+inx config compact-ratio --local 75   # override in ./inx.toml
+```
+
+The editable range is 65–85%, with 80% as the built-in default. Lower values
+compact earlier and may reduce prompt-prefix cache reuse; higher values retain
+more context before compaction. Project `inx.toml` takes precedence over
+the user config. Changes apply to new CLI sessions; an already-running session
+keeps the threshold it loaded at startup.
+
 ## One-shot and automation
 
 Use `-p` / `--print` when a script needs only the final answer:
@@ -120,9 +138,40 @@ echo "explain this code" | inx run
 
 `inx run` keeps the normal streamed terminal presentation unless `-p` or a
 structured output format is selected. It also accepts `--model`, `--profile`,
-`--max-steps`, `--effort`, `--dir`, `--add-dir`, `--continue`, `--resume PATH`,
+`--max-steps`, `--effort`, `--dir`, `--add-dir`, `--continue`, `--resume QUERY`,
 `--copy`, `--allowed-tools`, `--permission-mode`, and `--auto` / `-y` (an alias
 for `--permission-mode auto`).
+
+### Benchmark arms
+
+`--ablate` switches whole subsystems off so a benchmark can attribute a change
+in success rate to one of them. It accepts a comma-separated list of `evidence`,
+`planner`, `subagent`, `retrieval` and `compaction`, plus `none` (the default,
+everything on) and `all`. Sub-agents inherit the parent's arm, and the arm name
+is written to the `--metrics` file so a recorded run is self-describing.
+
+```sh
+inx run --ablate evidence,planner --metrics run.json "fix the failing test"
+```
+
+This is a measurement tool, not a tuning knob: switching a subsystem off makes
+Inx worse at the work it was added for.
+
+### Trajectory recording
+
+`--trajectory PATH` appends the run's full event stream — tool dispatches and
+results with absolute start/end times, reasoning, retries, readiness and
+recovery decisions — as one timestamped, sequenced JSONL record per event, so
+a run can be replayed and its time attributed offline (tool execution vs. the
+model thinking between calls). Records reuse the shared `eventwire` JSON
+contract under an `event` key, wrapped in `schema_version`, `seq`, and `ts`
+(unix ms). Every completed line survives a killed run. Unlike `--events-jsonl`,
+the file contains prompts, tool arguments, and reasoning: treat it with the
+same care as a session transcript.
+
+```sh
+inx run --metrics run.json --trajectory run.trajectory.jsonl "fix the failing test"
+```
 
 ### Output formats
 
@@ -200,6 +249,9 @@ inx session status <machine-session-id> --json [--dir SESSION_DIR | --project-ro
 inx session recovery [<machine-session-id>] --json [--dir SESSION_DIR | --project-root PATH]
 inx task list --json [--dir SESSION_DIR | --project-root PATH] [--session MACHINE_SESSION_ID]
 inx task show <task-id> --json [--dir SESSION_DIR | --project-root PATH] [--session MACHINE_SESSION_ID]
+inx task monitor list --json [--dir PROJECT_DIR]
+inx task monitor status <task-id> --json [--dir PROJECT_DIR]
+inx task monitor events <task-id> --json|--jsonl [--dir PROJECT_DIR] [--after N] [--follow]
 inx hook list --json [--project-root PATH] [--home-dir PATH]
 inx hook status --json [--project-root PATH] [--home-dir PATH]
 ```
@@ -250,9 +302,10 @@ inx --resume provider-config --copy
 - `--copy` leaves the original transcript untouched and continues in a new
   writable session. Use it when another Inx process owns the original.
 
-For one-shot runs, `inx run --resume PATH "task"` accepts a session file
-path. Session leases prevent the desktop app and CLI from writing the same
-transcript concurrently.
+For one-shot runs, `inx run --resume QUERY "task"` accepts a session file
+path, a session ID, or an opaque machine session ID from `--events-jsonl` /
+`inx session show --json`. Session leases prevent the desktop app and CLI
+from writing the same transcript concurrently.
 
 ## Permissions
 
@@ -381,16 +434,23 @@ the displayed list matches the commands the TUI accepts.
 | `/output-style` | Select an answer style. |
 | `/verbose` | Toggle expanded reasoning display. |
 | `/sandbox` | Inspect sandbox status. |
-| `/goal` | Start, inspect, or clear a long-running goal. |
+| `/goal [objective]` | Start a long-running goal, or inspect the current goal and its budget runtime. |
+| `/goal status` | Show the active goal plus the turn/token/no-progress budget summary and the last continuation/evaluator reason. |
+| `/goal pause` | Pause the running goal (keeps todos, Delivery checkpoint, and budget). |
+| `/goal resume` | Resume a paused or blocked goal (budget pauses add one more budget slice). |
+| `/goal clear` | End goal mode permanently. |
+| `/docs [question]` | Show the embedded corpus identity, or search it locally and ask the configured AI to answer from version-matched evidence. |
+| `/inx:docs [question]` | Preferred built-in fallback when an existing custom command or compatible plugin/skill alias owns `/docs`; if this spelling is also owned, the menu selects the next free `inx:`-qualified name without displacing it. |
 | `/mcp`, `/skills`, `/hooks` | Inspect and manage extensions. |
 | `/remember <note>` | Append a standing note to the project instruction document; `# <note>` is a shortcut. |
 | `/memory [subcommand]` | Inspect instructions, memory provenance, recall, revisions, and recovery. |
 | `/rewind` | Restore conversation and/or code to an earlier turn. |
 | `/tree`, `/branch`, `/switch` | Inspect or navigate conversation branches. |
+| `/reload` | Reload the agent runtime (extensions, tools, skills, commands, hooks, providers) while keeping the session. Queued once while a turn runs, then fail-atomic: a failed rebuild keeps the current runtime. |
 
 Switching model, effort, or work mode rebuilds the runtime while preserving the
 active conversation, session-scoped permission overrides, additional directory
-access, and session ownership.
+access, and session ownership. `/reload` uses the same fail-atomic rebuild.
 
 ### Memory diagnostics and recovery
 
@@ -408,7 +468,8 @@ names, and owned archive paths.
 | `/memory archived` | List archived facts and their owned paths. |
 | `/memory recover <archive-path>` | Recover an archive as a new revision without overwriting active data. |
 
-These commands run against the active session controller. In a Remote Workbench
-they use the remote memory catalog and never fall back to local desktop memory.
-See [Context Engine v2](./SESSION_MEMORY_RETRIEVAL.md) for authority, automatic
-recall, write confirmation, and migration behavior.
+These commands run against the active session controller. When the session
+lives on a remote host (`inx remote connect` / a desktop remote web
+window), they use the remote memory catalog and never fall back to local
+desktop memory. See [Context Engine v2](./SESSION_MEMORY_RETRIEVAL.md) for
+authority, automatic recall, write confirmation, and migration behavior.

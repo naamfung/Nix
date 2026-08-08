@@ -50,10 +50,10 @@ auto_start = false
 	write(t, filepath.Join(root, "AGENTS.md"), "# Agents\nUse go test.\n@../secret.md\n")
 
 	r := capdiag.Collect(capdiag.Options{
-		Root:       root,
-		HomeDir:    home,
+		Root:            root,
+		HomeDir:         home,
 		InxHomeDir: filepath.Join(home, ".inx"),
-		Live:       false,
+		Live:            false,
 	})
 
 	if r.SchemaVersion != 1 {
@@ -120,6 +120,41 @@ auto_start = false
 	if len(r.Instructions.Docs) == 0 {
 		t.Fatal("expected AGENTS.md in instructions")
 	}
+}
+
+func TestCollectUsesExactInxHomeForGlobalHooks(t *testing.T) {
+	root := t.TempDir()
+	home := t.TempDir()
+	inxHome := filepath.Join(home, "AppData", "Roaming", "inx")
+	write(t, filepath.Join(inxHome, "settings.json"), `{
+  "hooks": {
+    "SessionStart": [{"command": "echo exact-home"}]
+  }
+}`)
+
+	report := capdiag.Collect(capdiag.Options{
+		Root:            root,
+		HomeDir:         home,
+		InxHomeDir: inxHome,
+	})
+	if report.Summary.Hooks != 1 || len(report.Hooks.Entries) != 1 {
+		t.Fatalf("hooks = %+v, summary = %+v", report.Hooks, report.Summary)
+	}
+	for _, source := range report.Hooks.Sources {
+		if source.Scope == "global" {
+			if source.Status != "ok" || source.HookCount != 1 {
+				t.Fatalf("global hook source = %+v, want exact Inx home settings", source)
+			}
+			if source.Path != "<inx-home>/settings.json" && source.Path != "<inx-home>\\settings.json" {
+				// displayPath uses ToSlash
+				if !strings.Contains(source.Path, "<inx-home>") {
+					t.Fatalf("global path = %q, want <inx-home> prefix", source.Path)
+				}
+			}
+			return
+		}
+	}
+	t.Fatal("global hook source not reported")
 }
 
 func TestMissingConventionDirsNoWarning(t *testing.T) {

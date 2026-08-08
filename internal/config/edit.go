@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 
+	"inx/internal/extension/protocol"
 	"inx/internal/fileutil"
 	fileencoding "inx/internal/fileutil/encoding"
 	"inx/internal/mcpdiag"
@@ -45,13 +47,16 @@ const (
 //   - "provider/model"    — that specific model under that provider.
 //
 // Either is rejected when the target does not exist, so a UI can't strand
-// the config on a model that doesn't exist.
+// the config on a model that doesn't exist. Plugin-namespaced refs
+// (plugin/<plugin>/<provider>/<model>) are the exception: they belong to
+// extension sidecars, so the config catalog cannot vouch for them — boot's
+// merged resolver gates them at the next launch instead.
 func (c *Config) SetDefaultModel(name string) error {
 	name = strings.TrimSpace(name)
 	if name == "" {
 		return fmt.Errorf("set default: empty name")
 	}
-	if _, ok := c.ResolveModel(name); !ok {
+	if _, ok := c.ResolveModel(name); !ok && protocol.PluginRefOwner(name) == "" {
 		return fmt.Errorf("set default: no such model %q (configured: %s)", name, c.providerNames())
 	}
 	c.DefaultModel = name
@@ -271,6 +276,22 @@ func (c *Config) SetDesktopAppearance(theme, style string) error {
 	return nil
 }
 
+// SetDesktopTerminalTheme sets the integrated terminal colour preference.
+// This is desktop-only UI state and never rebuilds or changes model requests.
+func (c *Config) SetDesktopTerminalTheme(theme string) error {
+	switch strings.ToLower(strings.TrimSpace(theme)) {
+	case "", "auto":
+		c.Desktop.TerminalTheme = "auto"
+	case "dark":
+		c.Desktop.TerminalTheme = "dark"
+	case "light":
+		c.Desktop.TerminalTheme = "light"
+	default:
+		return fmt.Errorf("desktop terminal theme %q: must be auto|dark|light", theme)
+	}
+	return nil
+}
+
 // SetDesktopLayoutStyle sets the desktop layout style. UI-only; it must not
 // affect CLI output or provider-visible request data.
 func (c *Config) SetDesktopLayoutStyle(style string) error {
@@ -397,6 +418,26 @@ func (c *Config) SetCLIUpdateChannel(channel string) error {
 // SetColdResumePrune toggles auto-elision of stale tool results on cold resume.
 func (c *Config) SetColdResumePrune(enabled bool) error {
 	c.Agent.ColdResumePrune = &enabled
+	return nil
+}
+
+// SetCompactRatio updates the user-controlled auto-compaction threshold.
+// Keep the editable range inside the default snip/force guard rails so lowering
+// the threshold cannot accidentally turn normal cache growth into constant
+// compaction, while higher values still retain context-exhaustion headroom.
+func (c *Config) SetCompactRatio(ratio float64) error {
+	if math.IsNaN(ratio) || math.IsInf(ratio, 0) || ratio < 0.65 || ratio > 0.85 {
+		return fmt.Errorf("compact ratio %v: must be between 0.65 and 0.85", ratio)
+	}
+	snip := c.Agent.ToolResultSnipRatio
+	force := c.Agent.CompactForceRatio
+	if snip > 0 && ratio <= snip {
+		return fmt.Errorf("compact ratio %.2f: must be greater than tool result snip ratio %.2f", ratio, snip)
+	}
+	if force > 0 && ratio >= force {
+		return fmt.Errorf("compact ratio %.2f: must be less than force ratio %.2f", ratio, force)
+	}
+	c.Agent.CompactRatio = ratio
 	return nil
 }
 
@@ -635,10 +676,8 @@ func (c *Config) AddPermissionRule(list, rule string) error {
 	if _, ok := permission.ParseRule(rule); !ok {
 		return fmt.Errorf("invalid permission rule %q (want \"ToolName\" or \"ToolName(glob)\")", rule)
 	}
-	for _, existing := range *target {
-		if existing == rule {
-			return nil // already present
-		}
+	if slices.Contains(*target, rule) {
+		return nil // already present
 	}
 	*target = append(*target, rule)
 	return nil
@@ -1663,7 +1702,7 @@ func mergeTOMLDelta(body, delta string) string {
 }
 
 func mergeTOMLTopLevelFields(body, fields string) string {
-	for _, line := range strings.Split(fields, "\n") {
+	for line := range strings.SplitSeq(fields, "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" {
 			continue
@@ -1691,6 +1730,22 @@ func SaveMinimalProjectReasoningLanguage(path, lang string) (string, error) {
 reasoning_language = %q
 `, cfg.ReasoningLanguage())
 	return cfg.ReasoningLanguage(), writeConfigFile(path, body)
+}
+
+// SaveMinimalProjectCompactRatio writes a new project config that only
+// overrides [agent].compact_ratio.
+func SaveMinimalProjectCompactRatio(path string, ratio float64) (float64, error) {
+	cfg := Default()
+	if err := cfg.SetCompactRatio(ratio); err != nil {
+		return 0, err
+	}
+	body := fmt.Sprintf(`# Inx project configuration.
+# Project-local overrides are merged over the user config.
+
+[agent]
+compact_ratio = %s
+`, formatFloat(cfg.Agent.CompactRatio))
+	return cfg.Agent.CompactRatio, writeConfigFile(path, body)
 }
 
 func writeConfigFile(path, body string) error {

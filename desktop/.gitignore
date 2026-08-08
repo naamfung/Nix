@@ -25,22 +25,24 @@
 # Commit the hand-written Linux .deb packaging inputs and app icon assets.
 # `wails build` does not generate these, so they must live in git. The .deb is built
 # by scripts/desktop-build.sh's linux branch via goreleaser/nfpm. Parent un-ignored first.
-# inx.desktop and io.inx.desktop.update.policy are generated during packaging and stay ignored.
 !/build/linux
 /build/linux/*
 !/build/linux/nfpm.yaml
+!/build/linux/reasonix.desktop
+!/build/linux/io.reasonix.desktop.update.policy
+!/build/linux/postinstall.sh
 !/build/linux/icons
 !/build/linux/icons/**
 
 # Go test binaries
 *.test
 
-# Local config symlinks for `wails dev` (point at the repo-root inx.toml/.env
+# Local config symlinks for `wails dev` (point at the repo-root reasonix.toml/.env
 # so the desktop app resolves the same config/keys the CLI does). Never commit.
-/inx.toml
+/reasonix.toml
 /.env
 
-# `go build` binary produced in-tree (module inx/desktop → "desktop")
+# `go build` binary produced in-tree (module reasonix/desktop → "desktop")
 /desktop
 # Wails dependency-change cache
 /frontend/package.json.md5

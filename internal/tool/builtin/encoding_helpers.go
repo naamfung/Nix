@@ -3,9 +3,10 @@ package builtin
 import (
 	"fmt"
 	"os"
-	"path/filepath"
+	"slices"
 	"strings"
 
+	"inx/internal/fileutil"
 	fileenc "inx/internal/fileutil/encoding"
 )
 
@@ -13,30 +14,20 @@ import (
 // Returns the decoded content and the detected encoding kind so callers
 // can re-encode on write to preserve the original charset.
 func readFileEncoded(path string) (content string, enc fileenc.Kind, err error) {
-	variants := tryWinPathVariants(path)
-	var lastErr error
-	for _, v := range variants {
-		b, err := os.ReadFile(v)
-		if err == nil {
-			enc, _ = fileenc.Detect(b)
-			return string(fileenc.Decode(b, enc)), enc, nil
-		}
-		lastErr = err
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return "", 0, err
 	}
-	if len(variants) == 0 {
-		return "", 0, lastErr
-	}
-	return "", 0, enrichPathError("open", variants[0], lastErr)
+	enc, _ = fileenc.Detect(b)
+	return string(fileenc.Decode(b, enc)), enc, nil
 }
 
 // writeFileEncoded encodes content back to the given encoding and writes it.
+// The write is atomic: a truncating write that fails midway (a Windows filter
+// driver holding a transient lock, a full disk) would leave the user's source
+// file empty or half-written.
 func writeFileEncoded(path string, content string, enc fileenc.Kind) error {
-	// Try creating directories with path variants for Windows paths under Unix-style shells.
-	writePath, merr := tryMkdirAllVariants(tryWinPathVariants(path))
-	if merr != nil {
-		return fmt.Errorf("mkdir %s: %w", filepath.Dir(path), merr)
-	}
-	return os.WriteFile(writePath, fileenc.Encode(content, enc), 0o644)
+	return fileutil.AtomicOverwriteFile(path, fileenc.Encode(content, enc), 0o644)
 }
 
 // matchLineEndings adapts an edit's old/new text to a CRLF file when the literal
@@ -367,8 +358,8 @@ func stripReadFileLinePrefix(line string) (string, bool) {
 
 func replaceEditRanges(content string, ranges []editRange, replacement string) string {
 	updated := content
-	for i := len(ranges) - 1; i >= 0; i-- {
-		r := ranges[i]
+	for _, v := range slices.Backward(ranges) {
+		r := v
 		updated = updated[:r.start] + replacement + updated[r.end:]
 	}
 	return updated
@@ -447,11 +438,8 @@ func firstNonEmptyLine(s string) string {
 }
 
 func commonPrefixLen(a, b string) int {
-	n := len(a)
-	if len(b) < n {
-		n = len(b)
-	}
-	for i := 0; i < n; i++ {
+	n := min(len(b), len(a))
+	for i := range n {
 		if a[i] != b[i] {
 			return i
 		}

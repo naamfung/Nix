@@ -107,11 +107,9 @@ func TestWritePendingReportQueueIsBoundedUnderConcurrentWriters(t *testing.T) {
 	var done sync.WaitGroup
 	var successes atomic.Int32
 
-	for i := 0; i < writers; i++ {
+	for range writers {
 		ready.Add(1)
-		done.Add(1)
-		go func() {
-			defer done.Done()
+		done.Go(func() {
 			report := baseCrashReport("performance")
 			report.Source = "native.watchdog"
 			report.Label = "mac.main_thread.hang"
@@ -121,7 +119,7 @@ func TestWritePendingReportQueueIsBoundedUnderConcurrentWriters(t *testing.T) {
 			if writePendingReport(report, false) {
 				successes.Add(1)
 			}
-		}()
+		})
 	}
 	ready.Wait()
 	close(start)
@@ -156,20 +154,12 @@ func TestWritePendingCrashScrubsSensitiveText(t *testing.T) {
 }
 
 func TestFlushPendingCrashSendsAndClears(t *testing.T) {
-	isolateDesktopUserDirs(t)
 	oldVersion, oldEndpoint := version, crashEndpoint
 	t.Cleanup(func() {
 		version, crashEndpoint = oldVersion, oldEndpoint
 		removeAllPendingCrashes()
 	})
 	version = "v9.9.9"
-
-	// Fork default is telemetry-off (no outbound requests). Exercise the flush
-	// path with telemetry explicitly enabled so it tests the send/clear logic.
-	app := NewApp()
-	if err := app.SetDesktopTelemetry(true); err != nil {
-		t.Fatalf("SetDesktopTelemetry: %v", err)
-	}
 
 	var hits atomic.Int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -180,7 +170,7 @@ func TestFlushPendingCrashSendsAndClears(t *testing.T) {
 	crashEndpoint = srv.URL
 
 	writePendingCrash("flush", "boom", []byte("stack"))
-	app.flushPendingCrash()
+	NewApp().flushPendingCrash()
 
 	if hits.Load() != 1 {
 		t.Errorf("server hits = %d, want 1", hits.Load())

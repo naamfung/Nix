@@ -52,7 +52,7 @@ if [[ ! "$notes_version" =~ $release_version_pattern ]]; then
 fi
 
 expected_tag="desktop-${version}"
-github_base="https://github.com/naamfung/inx/releases/download/${expected_tag}/"
+github_base="https://github.com/esengine/DeepSeek-Inx/releases/download/${expected_tag}/"
 r2_base="https://dl.inx.io/${expected_tag}/"
 legacy_preview_base="https://dl.inx.io/desktop-preview/"
 if [ "$channel" = "legacy-preview" ] && [ "$asset_base" = "$legacy_preview_base" ]; then

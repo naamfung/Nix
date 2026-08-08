@@ -52,7 +52,11 @@ func renderTurnReceipt(u *provider.Usage, p *provider.Pricing, d *event.CacheDia
 		return ""
 	}
 
-	groups := []string{shortTokens(u.TotalTokens) + " tok"}
+	total := shortTokens(u.TotalTokens) + " tok"
+	if u.Estimated {
+		total = "≈" + total
+	}
+	groups := []string{total}
 	if u.PromptTokens > 0 {
 		cached := u.CacheHitTokens
 		fresh := u.CacheMissTokens
@@ -69,8 +73,11 @@ func renderTurnReceipt(u *provider.Usage, p *provider.Pricing, d *event.CacheDia
 	if u.ReasoningTokens > 0 {
 		groups = append(groups, "reasoning "+shortTokens(u.ReasoningTokens))
 	}
-	if p != nil && p.Cost(u) > 0 {
+	if p != nil {
 		groups = append(groups, fmt.Sprintf("%s%.4f", p.Symbol(), p.Cost(u)))
+	}
+	if u.Estimated {
+		groups = append(groups, "estimated")
 	}
 
 	separator := footerHint(" · ")
@@ -78,7 +85,7 @@ func renderTurnReceipt(u *provider.Usage, p *provider.Pricing, d *event.CacheDia
 	for _, group := range groups {
 		styled = append(styled, footerValue(group))
 	}
-	receipt := footerHint("✻") + "  " + footerLabel(i18n.M.ChatTurnReceiptLabel) + " " + strings.Join(styled, separator)
+	receipt := statusFooterIndent + footerLabel(i18n.M.ChatTurnReceiptLabel) + "  " + strings.Join(styled, separator)
 	if d != nil && d.PrefixChanged {
 		reasons := strings.Join(d.PrefixChangeReasons, "+")
 		if reasons == "" {
@@ -285,7 +292,7 @@ func (m chatTUI) renderStatusBlock(primary string, width int) string {
 // the optional shortcut help yields space to the composer.
 func hideStatusHintWhenKeyNamesCannotFit(primary string, width int) string {
 	hint := i18n.M.ChatStatusCycleHintCompact
-	for _, group := range strings.Split(hint, " · ") {
+	for group := range strings.SplitSeq(hint, " · ") {
 		if visibleWidth(statusFooterIndent+group) > width {
 			return strings.Replace(primary, " · "+footerHint(hint), "", 1)
 		}

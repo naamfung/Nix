@@ -56,7 +56,7 @@ function prNumbersFromCommits(commits) {
 }
 
 async function githubJson(path, { allowMissing = false } = {}) {
-  const headers = { Accept: "application/vnd.github+json", "User-Agent": "inx-release-notes" };
+  const headers = { Accept: "application/vnd.github+json", "User-Agent": "reasonix-release-notes" };
   if (process.env.GITHUB_TOKEN || process.env.GH_TOKEN) {
     headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN || process.env.GH_TOKEN}`;
   }
@@ -118,13 +118,17 @@ async function askDeepSeek(payload, retry = true) {
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       model,
+      // Release notes need deterministic structured output, not hidden chain of
+      // thought. Thinking tokens share the generation budget with content and
+      // can otherwise leave response_format JSON empty or truncated.
+      thinking: { type: "disabled" },
       temperature: 0,
       max_tokens: 8000,
       response_format: { type: "json_object" },
       messages: [
         {
           role: "system",
-          content: `You are Inx's release editor. Return one JSON object with a \"release\" property. Write factual, user-facing product release notes in equivalent English and Simplified Chinese. Group changes by user outcome, not by commit. Never invent capabilities, migrations, risks, PR numbers, contributors, URLs, or metrics. Every highlight and change must cite one or more supplied PR numbers. Use this exact release shape:
+          content: `You are Reasonix's release editor. Return one JSON object with a \"release\" property. Write factual, user-facing product release notes in equivalent English and Simplified Chinese. Group changes by user outcome, not by commit. Never invent capabilities, migrations, risks, PR numbers, contributors, URLs, or metrics. Every highlight and change must cite one or more supplied PR numbers. Use this exact release shape:
 {
   \"version\": \"semver\", \"date\": \"YYYY-MM-DD\", \"channel\": \"stable|prerelease\",
   \"title\": {\"en\":\"\",\"zh\":\"\"}, \"summary\": {\"en\":\"\",\"zh\":\"\"},
@@ -144,10 +148,13 @@ Return guides only for supplied documentation URLs. Mention upgrade action or ri
   });
   if (!response.ok) throw new Error(`DeepSeek API failed: ${response.status} ${await response.text()}`);
   const data = await response.json();
+  const choice = data.choices?.[0];
   try {
-    return extractJson(data.choices?.[0]?.message?.content);
+    return extractJson(choice?.message?.content);
   } catch (error) {
-    if (!retry) throw error;
+    if (!retry) {
+      throw new Error(`${error.message} (finish_reason=${choice?.finish_reason || "unknown"})`);
+    }
     return askDeepSeek(payload, false);
   }
 }
@@ -221,8 +228,8 @@ async function main() {
     github: `https://github.com/${repository}/releases/tag/${tag}`,
     compare: `https://github.com/${repository}/compare/${from}...${tag}`,
     download: channel === "prerelease"
-      ? "https://inx.io/?download=desktop&channel=preview#start"
-      : "https://inx.io/?download=desktop&channel=stable#start",
+      ? "https://reasonix.io/?download=desktop&channel=preview#start"
+      : "https://reasonix.io/?download=desktop&channel=stable#start",
   };
   release.guides = (release.guides || []).filter((guide) => docLinks.includes(guide.href));
   assertGroundedRefs(release, new Set(pulls.map((pull) => pull.number)));

@@ -125,11 +125,7 @@ func TestLoadCCSwitchLegacyConfigPrefersInxFlag(t *testing.T) {
 	if err != nil {
 		t.Fatalf("loadCCSwitchLegacyConfig: %v", err)
 	}
-	names := make(map[string]bool, len(got))
-	for _, e := range got {
-		names[e.Name] = true
-	}
-	if len(got) != 2 || !names["legacy"] || !names["inx-on"] {
+	if len(got) != 2 || got[0].Name != "legacy" || got[1].Name != "inx-on" {
 		t.Fatalf("entries = %+v, want legacy fallback and explicit Inx enablement", got)
 	}
 }

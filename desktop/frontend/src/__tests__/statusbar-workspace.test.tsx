@@ -154,6 +154,42 @@ console.log("\nstatus bar workspace");
 }
 
 {
+  const estimated = renderStatusBar({
+    items: ["session_tokens", "turn_tokens", "turn_cost", "cost"],
+    context: { used: 0, window: 0, sessionTokens: 1_200, estimated: true },
+    usage: {
+      promptTokens: 800,
+      completionTokens: 200,
+      totalTokens: 1_000,
+      cacheHitTokens: 0,
+      cacheMissTokens: 800,
+      estimated: true,
+    },
+    sessionTokens: 1_200,
+    turnTokens: 1_000,
+    turnCost: 0.2,
+    cost: 0.3,
+    currency: "USD",
+  });
+  ok((estimated.match(/≈/g) ?? []).length === 4, "estimated token and cost metrics use an approximation marker");
+
+  const empty = renderStatusBar({
+    items: ["session_tokens", "turn_tokens", "turn_cost", "cost"],
+    context: { used: 0, window: 0, sessionTokens: 0, estimated: true },
+    usage: {
+      promptTokens: 0,
+      completionTokens: 0,
+      totalTokens: 0,
+      cacheHitTokens: 0,
+      cacheMissTokens: 0,
+      estimated: true,
+    },
+    currency: "USD",
+  });
+  ok(!empty.includes("≈-"), "empty estimated metrics remain a plain dash");
+}
+
+{
   const dom = new JSDOM("<!doctype html><html><body><div id=\"root\"></div></body></html>", {
     pretendToBeVisual: true,
     url: "http://localhost/",
@@ -161,6 +197,9 @@ console.log("\nstatus bar workspace");
   (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
   globalThis.window = dom.window as unknown as Window & typeof globalThis;
   globalThis.document = dom.window.document;
+  // Node's built-in navigator reflects the machine's ICU locale; pin jsdom's
+  // en-US one so English-string assertions hold on zh-locale machines.
+  Object.defineProperty(globalThis, "navigator", { configurable: true, value: dom.window.navigator });
   globalThis.Node = dom.window.Node;
   globalThis.HTMLElement = dom.window.HTMLElement;
   globalThis.HTMLButtonElement = dom.window.HTMLButtonElement;
@@ -258,26 +297,17 @@ console.log("\nstatus bar workspace");
         <StatusBar
           context={{ used: 0, window: 0, sessionTokens: 0 }}
           running={false}
-          workbenchTarget={{ kind: "ssh", hostId: "remote-1" }}
-          jobs={[{ id: "remote-job", kind: "bash", label: "remote build", status: "running", startedAt: 1 }]}
-          backgroundRuntimes={[
-            {
-              tabId: "local-1", title: "Local delivery", detached: true,
-              running: false, pendingPrompt: false,
-              jobs: [{ id: "local-job", kind: "go", label: "local test", status: "running", startedAt: 1 }],
-            },
-          ]}
+          jobs={[{ id: "local-job", kind: "go", label: "local test", status: "running", startedAt: 1 }]}
         />
       </LocaleProvider>,
     );
   });
   const mixedJobsButton = rootEl.querySelector<HTMLButtonElement>(".statusbar__jobs-trigger");
-  ok(mixedJobsButton?.textContent?.includes("2") === true, "local and active Remote Workbench jobs share the total count");
+  ok(mixedJobsButton?.textContent?.includes("1") === true, "local jobs show in the status bar total");
   if (mixedJobsButton?.getAttribute("aria-expanded") !== "true") {
     await act(async () => { mixedJobsButton?.click(); });
   }
-  ok(document.body.textContent?.includes("local test") === true, "local background jobs remain visible in Remote Workbench");
-  ok(document.body.textContent?.includes("remote build") === true, "active Remote Workbench jobs remain visible beside local jobs");
+  ok(document.body.textContent?.includes("local test") === true, "local background jobs remain visible");
   await act(async () => { root.unmount(); });
   dom.window.close();
 }

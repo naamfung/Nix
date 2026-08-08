@@ -122,6 +122,37 @@ func TestProviderViewFromEntryIncludesThinking(t *testing.T) {
 	}
 }
 
+func TestProviderViewFromEntryUsesEffectiveWebSearch(t *testing.T) {
+	view := providerViewFromEntry(config.ProviderEntry{
+		Name:    "deepseek-responses",
+		Kind:    "responses",
+		BaseURL: "https://api.deepseek.com",
+	}, false, true)
+	if !view.WebSearch {
+		t.Fatal("official DeepSeek Responses omission did not default web search on")
+	}
+
+	disabled := false
+	explicitOff := providerViewFromEntry(config.ProviderEntry{
+		Name:      "deepseek-responses",
+		Kind:      "responses",
+		BaseURL:   "https://api.deepseek.com",
+		WebSearch: &disabled,
+	}, false, true)
+	if explicitOff.WebSearch {
+		t.Fatal("explicit web_search=false was not preserved")
+	}
+
+	custom := providerViewFromEntry(config.ProviderEntry{
+		Name:    "custom-responses",
+		Kind:    "responses",
+		BaseURL: "https://gateway.example/v1",
+	}, false, true)
+	if custom.WebSearch {
+		t.Fatal("custom provider unexpectedly enabled web search")
+	}
+}
+
 func TestProviderViewFromEntryShowsKeySource(t *testing.T) {
 	isolateDesktopUserDirs(t)
 	t.Setenv("TEST_PROVIDER_KEY_SOURCE", "")
@@ -958,6 +989,62 @@ func TestSaveProviderPreservesExplicitEmptyVisionModels(t *testing.T) {
 	}
 }
 
+func TestSaveProviderPersistsWebSearchOn(t *testing.T) {
+	isolateDesktopUserDirs(t)
+
+	if err := NewApp().SaveProvider(ProviderView{
+		Name:      "deepseek-responses",
+		Kind:      "responses",
+		BaseURL:   "https://api.deepseek.com",
+		Models:    []string{"deepseek-v4-flash"},
+		Default:   "deepseek-v4-flash",
+		WebSearch: true,
+	}); err != nil {
+		t.Fatalf("SaveProvider: %v", err)
+	}
+
+	cfg := config.LoadForEdit(config.UserConfigPath())
+	got, ok := cfg.Provider("deepseek-responses")
+	if !ok || got.WebSearch == nil || !*got.WebSearch {
+		t.Fatalf("saved provider = %+v, found=%v; want web_search=true", got, ok)
+	}
+	raw, err := os.ReadFile(config.UserConfigPath())
+	if err != nil {
+		t.Fatalf("read saved config: %v", err)
+	}
+	if !strings.Contains(string(raw), "web_search  = true") {
+		t.Fatalf("saved config did not persist web_search:\n%s", raw)
+	}
+}
+
+func TestSaveProviderPersistsExplicitWebSearchOff(t *testing.T) {
+	isolateDesktopUserDirs(t)
+
+	if err := NewApp().SaveProvider(ProviderView{
+		Name:      "deepseek-responses",
+		Kind:      "responses",
+		BaseURL:   "https://api.deepseek.com",
+		Models:    []string{"deepseek-v4-flash"},
+		Default:   "deepseek-v4-flash",
+		WebSearch: false,
+	}); err != nil {
+		t.Fatalf("SaveProvider: %v", err)
+	}
+
+	cfg := config.LoadForEdit(config.UserConfigPath())
+	got, ok := cfg.Provider("deepseek-responses")
+	if !ok || got.WebSearch == nil || *got.WebSearch || config.EffectiveWebSearch(got) {
+		t.Fatalf("saved provider = %+v, found=%v; want explicit web_search=false", got, ok)
+	}
+	raw, err := os.ReadFile(config.UserConfigPath())
+	if err != nil {
+		t.Fatalf("read saved config: %v", err)
+	}
+	if !strings.Contains(string(raw), "web_search  = false") {
+		t.Fatalf("saved config did not persist web_search=false:\n%s", raw)
+	}
+}
+
 func TestOfficialMimoAPITemplateRemoved(t *testing.T) {
 	if entries, keyEnv, err := officialProviderTemplate("mimo-api", "en"); err == nil {
 		t.Fatalf("officialProviderTemplate(mimo-api) = entries=%v key=%q nil error, want unknown template", entries, keyEnv)
@@ -1032,6 +1119,54 @@ func TestSetReasoningLanguagePersistsToUserConfig(t *testing.T) {
 	cfg := config.LoadForEdit(config.UserConfigPath())
 	if cfg.Agent.ReasoningLanguage != "zh" || cfg.ReasoningLanguage() != "zh" {
 		t.Fatalf("saved reasoning language = %q/%q, want zh", cfg.Agent.ReasoningLanguage, cfg.ReasoningLanguage())
+	}
+}
+
+func TestSetCompactRatioPersistsToUserConfig(t *testing.T) {
+	isolateDesktopUserDirs(t)
+
+	app := NewApp()
+	defaultView := app.Settings()
+	if defaultView.Agent.CompactRatio != 0.8 || defaultView.Agent.EffectiveCompactRatio != 0.8 {
+		t.Fatalf("default compact ratios = %v/%v, want 0.8/0.8", defaultView.Agent.CompactRatio, defaultView.Agent.EffectiveCompactRatio)
+	}
+	if err := app.SetCompactRatio(0.7); err != nil {
+		t.Fatalf("SetCompactRatio: %v", err)
+	}
+
+	view := app.Settings()
+	if view.Agent.CompactRatio != 0.7 {
+		t.Fatalf("Settings().Agent.CompactRatio = %v, want 0.7", view.Agent.CompactRatio)
+	}
+
+	cfg := config.LoadForEdit(config.UserConfigPath())
+	if cfg.Agent.CompactRatio != 0.7 {
+		t.Fatalf("saved compact ratio = %v, want 0.7", cfg.Agent.CompactRatio)
+	}
+	if cfg.Agent.ToolResultSnipRatio != 0.6 || cfg.Agent.CompactForceRatio != 0.9 {
+		t.Fatalf("setting compact ratio changed adjacent thresholds: %+v", cfg.Agent)
+	}
+
+	if err := app.SetCompactRatio(0.9); err == nil {
+		t.Fatal("SetCompactRatio should reject values outside the Desktop safety range")
+	}
+	cfg = config.LoadForEdit(config.UserConfigPath())
+	if cfg.Agent.CompactRatio != 0.7 {
+		t.Fatalf("rejected update changed saved compact ratio to %v", cfg.Agent.CompactRatio)
+	}
+}
+
+func TestSetCompactRatioRejectsActiveWorkBeforeSaving(t *testing.T) {
+	isolateDesktopUserDirs(t)
+
+	app := NewApp()
+	app.setTestCtrl(newBackgroundJobController(t, "compact-ratio-job"), "")
+	err := app.SetCompactRatio(0.7)
+	if err == nil || !strings.Contains(err.Error(), "stop background jobs") {
+		t.Fatalf("SetCompactRatio with background job error = %v, want active-work guard", err)
+	}
+	if got := config.LoadForEdit(config.UserConfigPath()).Agent.CompactRatio; got != 0.8 {
+		t.Fatalf("compact ratio changed after rejected update: %v", got)
 	}
 }
 
@@ -1176,26 +1311,26 @@ func TestSetReasoningLanguageRejectsBackgroundJobsBeforeSavingConfig(t *testing.
 	}
 }
 
-func TestSetDesktopCheckUpdatesDefaultsOffAndPersistsOn(t *testing.T) {
+func TestSetDesktopCheckUpdatesPersistsToUserConfig(t *testing.T) {
 	isolateDesktopUserDirs(t)
 
 	app := NewApp()
-	if app.Settings().CheckUpdates {
-		t.Fatal("Settings().CheckUpdates default = true, want false (fork: no outbound requests)")
+	if !app.Settings().CheckUpdates {
+		t.Fatal("Settings().CheckUpdates default = false, want true")
 	}
-	if err := app.SetDesktopCheckUpdates(true); err != nil {
+	if err := app.SetDesktopCheckUpdates(false); err != nil {
 		t.Fatalf("SetDesktopCheckUpdates: %v", err)
 	}
 	view := app.Settings()
-	if !view.CheckUpdates {
-		t.Fatal("Settings().CheckUpdates = false, want true")
+	if view.CheckUpdates {
+		t.Fatal("Settings().CheckUpdates = true, want false")
 	}
 	cfg := config.LoadForEdit(config.UserConfigPath())
-	if cfg.Desktop.CheckUpdates == nil || !*cfg.Desktop.CheckUpdates {
-		t.Fatalf("desktop.check_updates = %+v, want true", cfg.Desktop.CheckUpdates)
+	if cfg.Desktop.CheckUpdates == nil || *cfg.Desktop.CheckUpdates {
+		t.Fatalf("desktop.check_updates = %+v, want false", cfg.Desktop.CheckUpdates)
 	}
-	if !cfg.DesktopCheckUpdates() {
-		t.Fatal("DesktopCheckUpdates() = false, want true")
+	if cfg.DesktopCheckUpdates() {
+		t.Fatal("DesktopCheckUpdates() = true, want false")
 	}
 }
 
@@ -1304,26 +1439,26 @@ func TestRetiredAutoRecoveryCheckpointSettingsAreNoOps(t *testing.T) {
 	}
 }
 
-func TestSetDesktopMetricsDefaultsOffAndPersistsOn(t *testing.T) {
+func TestSetDesktopMetricsDefaultsOnAndPersistsOff(t *testing.T) {
 	isolateDesktopUserDirs(t)
 
 	app := NewApp()
-	if app.Settings().Metrics {
-		t.Fatal("Settings().Metrics default = true, want false (fork: no outbound requests)")
+	if !app.Settings().Metrics {
+		t.Fatal("Settings().Metrics default = false, want true")
 	}
-	if err := app.SetDesktopMetrics(true); err != nil {
+	if err := app.SetDesktopMetrics(false); err != nil {
 		t.Fatalf("SetDesktopMetrics: %v", err)
 	}
 	view := app.Settings()
-	if !view.Metrics {
-		t.Fatal("Settings().Metrics = false, want true")
+	if view.Metrics {
+		t.Fatal("Settings().Metrics = true, want false")
 	}
 	cfg := config.LoadForEdit(config.UserConfigPath())
-	if cfg.Desktop.Metrics == nil || !*cfg.Desktop.Metrics {
-		t.Fatalf("desktop.metrics = %+v, want true", cfg.Desktop.Metrics)
+	if cfg.Desktop.Metrics == nil || *cfg.Desktop.Metrics {
+		t.Fatalf("desktop.metrics = %+v, want false", cfg.Desktop.Metrics)
 	}
-	if !cfg.DesktopMetrics() {
-		t.Fatal("DesktopMetrics() = false, want true")
+	if cfg.DesktopMetrics() {
+		t.Fatal("DesktopMetrics() = true, want false")
 	}
 }
 

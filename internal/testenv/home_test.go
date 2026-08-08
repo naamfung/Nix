@@ -10,16 +10,16 @@ import (
 func TestIsolateUserStateRedirectsAndRestoresCallerEnvironment(t *testing.T) {
 	callerHome := t.TempDir()
 	callerEnvironment := map[string]string{
-		"HOME":            callerHome,
-		"USERPROFILE":     callerHome,
-		"XDG_CONFIG_HOME": filepath.Join(callerHome, "caller-config"),
-		"XDG_CACHE_HOME":  filepath.Join(callerHome, "caller-xdg-cache"),
-		"XDG_STATE_HOME":  filepath.Join(callerHome, "caller-xdg-state"),
-		"AppData":         filepath.Join(callerHome, "caller-appdata"),
-		"LocalAppData":    filepath.Join(callerHome, "caller-local-appdata"),
-		"INX_HOME":        filepath.Join(callerHome, "explicit-inx-home"),
-		"INX_STATE_HOME":  filepath.Join(callerHome, "caller-state"),
-		"INX_CACHE_HOME":  filepath.Join(callerHome, "caller-cache"),
+		"HOME":                callerHome,
+		"USERPROFILE":         callerHome,
+		"XDG_CONFIG_HOME":     filepath.Join(callerHome, "caller-config"),
+		"XDG_CACHE_HOME":      filepath.Join(callerHome, "caller-xdg-cache"),
+		"XDG_STATE_HOME":      filepath.Join(callerHome, "caller-xdg-state"),
+		"AppData":             filepath.Join(callerHome, "caller-appdata"),
+		"LocalAppData":        filepath.Join(callerHome, "caller-local-appdata"),
+		"INX_HOME":       filepath.Join(callerHome, "explicit-inx-home"),
+		"INX_STATE_HOME": filepath.Join(callerHome, "caller-state"),
+		"INX_CACHE_HOME": filepath.Join(callerHome, "caller-cache"),
 	}
 	for key, value := range callerEnvironment {
 		t.Setenv(key, value)

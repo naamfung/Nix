@@ -16,16 +16,20 @@ function splitPackageSpec(spec) {
   return [spec.slice(0, separator), spec.slice(separator + 1)];
 }
 
-function fixture(t, version = "1.5.0-canary.42") {
-  const root = mkdtempSync(join(tmpdir(), "inx-npm-publish-test-"));
+function fixture(
+  t,
+  version = "1.5.0-canary.42",
+  { forbidCleanup = false, visibilityDelayReads = 0 } = {},
+) {
+  const root = mkdtempSync(join(tmpdir(), "reasonix-npm-publish-test-"));
   t.after(() => rmSync(root, { recursive: true, force: true }));
 
-  const packages = ["@inx/cli-linux-x64", "inx"].map((name, index) => {
+  const packages = ["@reasonix/cli-linux-x64", "reasonix"].map((name, index) => {
     const dir = join(root, `package-${index}`);
     mkdirSync(dir);
     writeFileSync(
       join(dir, "package.json"),
-      `${JSON.stringify({ name, version, inxCandidateSha: candidateSha })}\n`,
+      `${JSON.stringify({ name, version, reasonixCandidateSha: candidateSha })}\n`,
     );
     return { name, dir };
   });
@@ -33,6 +37,7 @@ function fixture(t, version = "1.5.0-canary.42") {
     packages.map(({ name }) => [name, { versions: new Map(), tags: new Map() }]),
   );
   const calls = [];
+  const hiddenReads = new Map();
 
   function packageState(name) {
     if (!registry.has(name)) {
@@ -51,6 +56,12 @@ function fixture(t, version = "1.5.0-canary.42") {
     }
     if (args[0] === "view") {
       const [name, requestedVersion] = splitPackageSpec(args[1]);
+      const packageSpec = `${name}@${requestedVersion}`;
+      const remainingHiddenReads = hiddenReads.get(packageSpec) ?? 0;
+      if (remainingHiddenReads > 0) {
+        hiddenReads.set(packageSpec, remainingHiddenReads - 1);
+        return missingOk ? null : "";
+      }
       const metadata = registry.get(name)?.versions.get(requestedVersion);
       return metadata ? JSON.stringify(metadata) : missingOk ? null : "";
     }
@@ -63,10 +74,11 @@ function fixture(t, version = "1.5.0-canary.42") {
       state.versions.set(pkg.version, {
         name: pkg.name,
         version: pkg.version,
-        inxCandidateSha: pkg.inxCandidateSha,
-        gitHead: pkg.inxCandidateSha,
+        reasonixCandidateSha: pkg.reasonixCandidateSha,
+        gitHead: pkg.reasonixCandidateSha,
       });
       state.tags.set(args[args.indexOf("--tag") + 1], pkg.version);
+      hiddenReads.set(`${pkg.name}@${pkg.version}`, visibilityDelayReads);
       return "";
     }
     if (args[0] === "dist-tag" && args[1] === "add") {
@@ -76,29 +88,33 @@ function fixture(t, version = "1.5.0-canary.42") {
       return "";
     }
     if (args[0] === "dist-tag" && args[1] === "rm") {
+      if (forbidCleanup) {
+        throw new Error("npm dist-tag failed with exit code 1: npm error code E403");
+      }
       packageState(args[2]).tags.delete(args[3]);
       return "";
     }
     throw new Error(`unsupported fake npm invocation: ${args.join(" ")}`);
   }
 
-  function publish() {
-    return publishPackages({
+  function publish({ attempts = 2 } = {}) {
+    const options = {
       packages,
       version,
       candidateSha,
       runner,
       sleep: () => {},
-      attempts: 2,
       log: () => {},
-    });
+    };
+    if (attempts !== null) options.attempts = attempts;
+    return publishPackages(options);
   }
 
   function addVersion(name, publishedVersion = version, sha = candidateSha) {
     packageState(name).versions.set(publishedVersion, {
       name,
       version: publishedVersion,
-      inxCandidateSha: sha,
+      reasonixCandidateSha: sha,
       gitHead: sha,
     });
   }
@@ -135,6 +151,15 @@ test("fills a partially published package set before advancing canary", (t) => {
   for (const { name } of fx.packages) {
     assert.equal(fx.registry.get(name).tags.get("canary"), "1.5.0-canary.42");
     assert.equal(fx.registry.get(name).tags.has("canary-staging"), false);
+  }
+});
+
+test("waits through multi-minute npm registry visibility lag", (t) => {
+  const fx = fixture(t, "1.5.0-canary.42", { visibilityDelayReads: 18 });
+
+  assert.doesNotThrow(() => fx.publish({ attempts: null }));
+  for (const { name } of fx.packages) {
+    assert.equal(fx.registry.get(name).tags.get("canary"), "1.5.0-canary.42");
   }
 });
 
@@ -190,6 +215,19 @@ test("accepts legacy packages whose gitHead proves the candidate", (t) => {
   }
 
   assert.doesNotThrow(() => fx.publish());
+});
+
+test("does not fail a completed publish when npm forbids staging cleanup", (t) => {
+  const fx = fixture(t, "1.5.0-canary.42", { forbidCleanup: true });
+
+  assert.doesNotThrow(() => fx.publish());
+  for (const { name } of fx.packages) {
+    assert.equal(fx.registry.get(name).tags.get("canary"), "1.5.0-canary.42");
+    assert.equal(
+      fx.registry.get(name).tags.get("canary-staging"),
+      "1.5.0-canary.42",
+    );
+  }
 });
 
 test("compares channel versions without integer truncation", () => {

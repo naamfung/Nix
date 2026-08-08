@@ -111,7 +111,9 @@ grep -Fq 'bash scripts/resolve-desktop-candidate.sh' "$repo_root/.github/workflo
 [ "$(grep -Fc 'IN_ORCHESTRATOR: ${{ inputs.orchestrator }}' "$repo_root/.github/workflows/release-desktop.yml")" = "3" ]
 [ "$(grep -Fc 'name: Revalidate immutable Desktop candidate' "$repo_root/.github/workflows/release-desktop.yml")" = "2" ]
 [ "$(grep -Fc 'ref: ${{ needs.resolve.outputs.sha }}' "$repo_root/.github/workflows/release-desktop.yml")" -ge 4 ]
-[ "$(grep -Ec '^          path: release-control$' "$repo_root/.github/workflows/release-desktop.yml")" = "2" ]
+[ "$(grep -Ec '^          path: release-control$' "$repo_root/.github/workflows/release-desktop.yml")" = "3" ]
+grep -Fq 'name: Checkout protected release verifier' "$repo_root/.github/workflows/release-desktop.yml"
+grep -Fq './release-control/scripts/verify-windows-authenticode.ps1' "$repo_root/.github/workflows/release-desktop.yml"
 [ "$(grep -Fc 'ref: ${{ github.workflow_sha }}' "$repo_root/.github/workflows/release-desktop.yml")" -ge 2 ]
 [ "$(grep -Fc 'bash release-control/scripts/resolve-desktop-candidate.sh' "$repo_root/.github/workflows/release-desktop.yml")" = "2" ]
 [ "$(grep -Fc 'RELEASE_TAG: ${{ inputs.approved_cli_tag }}' "$repo_root/.github/workflows/release-desktop.yml")" = "3" ]
@@ -154,6 +156,20 @@ if sed -n '/^  workflow_dispatch:/,/^  workflow_call:/p' "$repo_root/.github/wor
 fi
 grep -Fq 'if: ${{ !inputs.orchestrated }}' "$repo_root/.github/workflows/release-npm.yml"
 grep -Fq 'Publish or recover immutable npm packages' "$repo_root/.github/workflows/release-npm.yml"
+if sed -n '/^  cache-guard:/,/^  npm:/p' \
+	"$repo_root/.github/workflows/release-npm.yml" |
+	grep -Fq 'RECOVERY_CONTROL_SHA'; then
+	echo "npm recovery control plane must load in the publisher job after candidate checkout" >&2
+	exit 1
+fi
+sed -n '/^  npm:/,$p' "$repo_root/.github/workflows/release-npm.yml" |
+	grep -Fq 'RECOVERY_CONTROL_SHA: ${{ github.workflow_sha }}'
+sed -n '/^  npm:/,$p' "$repo_root/.github/workflows/release-npm.yml" |
+	grep -Fq 'git restore --source="$RECOVERY_CONTROL_SHA"'
+for recovery_script in npm/publish.mjs scripts/finalize-npm-official-release.mjs; do
+	sed -n '/^  npm:/,$p' "$repo_root/.github/workflows/release-npm.yml" |
+		grep -Fq "$recovery_script"
+done
 grep -Fq 'publishPackages' "$repo_root/npm/build.mjs"
 grep -Eq 'signing-policy-slug: release-signing' "$repo_root/.github/workflows/release-desktop.yml"
 if grep -Eq 'signing-policy-slug:.*test-signing' "$repo_root/.github/workflows/release-desktop.yml"; then
@@ -358,7 +374,7 @@ for asset in \
 done
 publication_decider="$repo_root/scripts/decide-cli-release-publication.sh"
 test -x "$publication_decider"
-[ "$(bash "$publication_decider" stable v1.2.3 naamfung/inx - -)" = "publish" ]
+[ "$(bash "$publication_decider" stable v1.2.3 esengine/DeepSeek-Inx - -)" = "publish" ]
 publication_checksums="$test_root/cli-publication-SHA256SUMS"
 publication_release="$test_root/cli-publication-release.json"
 publication_hash="0000000000000000000000000000000000000000000000000000000000000000"
@@ -382,7 +398,7 @@ for asset in \
 done >"$publication_checksums"
 publication_checksum_hash="$(shasum -a 256 "$publication_checksums" | awk '{print $1}')"
 jq -n \
-	--arg repo "naamfung/inx" \
+	--arg repo "esengine/DeepSeek-Inx" \
 	--arg tag "v1.2.3" \
 	--arg archive_hash "$publication_hash" \
 	--arg checksum_hash "$publication_checksum_hash" \
@@ -405,33 +421,33 @@ jq -n \
 		]
 	}
 ' >"$publication_release"
-[ "$(bash "$publication_decider" stable v1.2.3 naamfung/inx \
+[ "$(bash "$publication_decider" stable v1.2.3 esengine/DeepSeek-Inx \
 	"$publication_release" "$publication_checksums")" = "reuse" ]
 publication_preview="$test_root/cli-publication-preview-release.json"
 jq '.tag_name = "v1.2.3-preview.4" | .prerelease = true |
-	.html_url = "https://github.com/naamfung/inx/releases/tag/v1.2.3-preview.4" |
+	.html_url = "https://github.com/esengine/DeepSeek-Inx/releases/tag/v1.2.3-preview.4" |
 	.assets |= map(.browser_download_url |= sub("/v1.2.3/"; "/v1.2.3-preview.4/"))' \
 	"$publication_release" >"$publication_preview"
-[ "$(bash "$publication_decider" preview v1.2.3-preview.4 naamfung/inx \
+[ "$(bash "$publication_decider" preview v1.2.3-preview.4 esengine/DeepSeek-Inx \
 	"$publication_preview" "$publication_checksums")" = "reuse" ]
 publication_rc="$test_root/cli-publication-rc-release.json"
 jq '.tag_name = "v1.2.3-rc.1" | .prerelease = true |
-	.html_url = "https://github.com/naamfung/inx/releases/tag/v1.2.3-rc.1" |
+	.html_url = "https://github.com/esengine/DeepSeek-Inx/releases/tag/v1.2.3-rc.1" |
 	.assets |= map(.browser_download_url |= sub("/v1.2.3/"; "/v1.2.3-rc.1/"))' \
 	"$publication_release" >"$publication_rc"
-[ "$(bash "$publication_decider" any v1.2.3-rc.1 naamfung/inx \
+[ "$(bash "$publication_decider" any v1.2.3-rc.1 esengine/DeepSeek-Inx \
 	"$publication_rc" "$publication_checksums")" = "reuse" ]
 publication_partial="$test_root/cli-publication-partial-release.json"
 jq '.assets |= map(select(.name != "inx-linux-arm64.tar.gz"))' \
 	"$publication_release" >"$publication_partial"
-if bash "$publication_decider" stable v1.2.3 naamfung/inx \
+if bash "$publication_decider" stable v1.2.3 esengine/DeepSeek-Inx \
 	"$publication_partial" "$publication_checksums" >/dev/null 2>&1; then
 	echo "CLI publication decider accepted a partial existing release" >&2
 	exit 1
 fi
 publication_bad_checksums="$test_root/cli-publication-bad-SHA256SUMS"
 sed '1s/^0/1/' "$publication_checksums" >"$publication_bad_checksums"
-if bash "$publication_decider" stable v1.2.3 naamfung/inx \
+if bash "$publication_decider" stable v1.2.3 esengine/DeepSeek-Inx \
 	"$publication_release" "$publication_bad_checksums" >/dev/null 2>&1; then
 	echo "CLI publication decider accepted mismatched checksums" >&2
 	exit 1
@@ -449,7 +465,7 @@ manifest_assets='[
 	"inx-windows-arm64.zip",
 	"SHA256SUMS"
 ]'
-manifest_repo="naamfung/inx"
+manifest_repo="esengine/DeepSeek-Inx"
 manifest_tag="v1.2.3"
 manifest_file="$test_root/cli-release-manifest.json"
 jq -n \
@@ -526,7 +542,7 @@ expect_invalid_cli_manifest() {
 jq '.assets[0].browser_download_url = "https://github.com/attacker/project/releases/download/v1.2.3/inx-darwin-amd64.tar.gz"' \
 	"$manifest_file" >"$test_root/wrong-repository.json"
 expect_invalid_cli_manifest "an asset from another repository" "$test_root/wrong-repository.json"
-jq '.assets[0].browser_download_url = "https://github.com/naamfung/inx/releases/download/v9.9.9/inx-darwin-amd64.tar.gz"' \
+jq '.assets[0].browser_download_url = "https://github.com/esengine/DeepSeek-Inx/releases/download/v9.9.9/inx-darwin-amd64.tar.gz"' \
 	"$manifest_file" >"$test_root/wrong-tag.json"
 expect_invalid_cli_manifest "an asset from another tag" "$test_root/wrong-tag.json"
 jq '.assets = .assets[:-1]' "$manifest_file" >"$test_root/missing-asset.json"
@@ -917,21 +933,21 @@ printf 'asset-a\n' >"$github_candidate/a"
 printf 'asset-b\n' >"$github_candidate/b"
 printf 'Release notes.\n' >"$github_notes"
 PATH="$fake_gh_bin:$PATH" FAKE_GH_STATE="$fake_gh_state" \
-	GITHUB_REPOSITORY=naamfung/inx \
+	GITHUB_REPOSITORY=esengine/DeepSeek-Inx \
 	bash "$desktop_github_publisher" desktop-v1.2.3 v1.2.3 false \
 	"$github_notes" "$github_candidate"
 bash "$desktop_directory_verifier" "$github_candidate" "$fake_gh_state/assets"
 
 rm -f "$fake_gh_state/assets/b"
 PATH="$fake_gh_bin:$PATH" FAKE_GH_STATE="$fake_gh_state" \
-	GITHUB_REPOSITORY=naamfung/inx \
+	GITHUB_REPOSITORY=esengine/DeepSeek-Inx \
 	bash "$desktop_github_publisher" desktop-v1.2.3 v1.2.3 false \
 	"$github_notes" "$github_candidate"
 bash "$desktop_directory_verifier" "$github_candidate" "$fake_gh_state/assets"
 
 printf 'conflict\n' >"$fake_gh_state/assets/a"
 if PATH="$fake_gh_bin:$PATH" FAKE_GH_STATE="$fake_gh_state" \
-	GITHUB_REPOSITORY=naamfung/inx \
+	GITHUB_REPOSITORY=esengine/DeepSeek-Inx \
 	bash "$desktop_github_publisher" desktop-v1.2.3 v1.2.3 false \
 	"$github_notes" "$github_candidate" >/dev/null 2>&1; then
 	echo "Desktop GitHub recovery accepted conflicting immutable content" >&2
@@ -940,7 +956,7 @@ fi
 cp "$github_candidate/a" "$fake_gh_state/assets/a"
 printf 'unexpected\n' >"$fake_gh_state/assets/unexpected"
 if PATH="$fake_gh_bin:$PATH" FAKE_GH_STATE="$fake_gh_state" \
-	GITHUB_REPOSITORY=naamfung/inx \
+	GITHUB_REPOSITORY=esengine/DeepSeek-Inx \
 	bash "$desktop_github_publisher" desktop-v1.2.3 v1.2.3 false \
 	"$github_notes" "$github_candidate" >/dev/null 2>&1; then
 	echo "Desktop GitHub recovery accepted an unexpected immutable asset" >&2
@@ -950,7 +966,7 @@ rm -f "$fake_gh_state/assets/unexpected"
 jq '.name = "Wrong title"' "$fake_gh_state/release.json" >"$fake_gh_state/release.json.new"
 mv "$fake_gh_state/release.json.new" "$fake_gh_state/release.json"
 if PATH="$fake_gh_bin:$PATH" FAKE_GH_STATE="$fake_gh_state" \
-	GITHUB_REPOSITORY=naamfung/inx \
+	GITHUB_REPOSITORY=esengine/DeepSeek-Inx \
 	bash "$desktop_github_publisher" desktop-v1.2.3 v1.2.3 false \
 	"$github_notes" "$github_candidate" >/dev/null 2>&1; then
 	echo "Desktop GitHub recovery accepted conflicting release metadata" >&2
@@ -1002,7 +1018,7 @@ desktop_stable_manifest="$test_root/desktop-stable.json"
 write_desktop_manifest "$desktop_stable_version" "$desktop_stable_base" "$desktop_stable_manifest"
 bash "$desktop_validator" stable "$desktop_stable_version" "$desktop_stable_base" "$desktop_stable_manifest"
 
-desktop_github_base="https://github.com/naamfung/inx/releases/download/desktop-${desktop_stable_version}/"
+desktop_github_base="https://github.com/esengine/DeepSeek-Inx/releases/download/desktop-${desktop_stable_version}/"
 desktop_github_manifest="$test_root/desktop-stable-github.json"
 write_desktop_manifest "$desktop_stable_version" "$desktop_github_base" "$desktop_github_manifest"
 bash "$desktop_validator" stable "$desktop_stable_version" "$desktop_github_base" "$desktop_github_manifest"
@@ -1129,6 +1145,7 @@ expect_invalid_desktop_manifest "a non-official asset base" preview "$desktop_pr
 # Release notes use one deterministic branch per official version. Failure to
 # open the PR must preserve that branch and print an exact manual handoff.
 prepare_notes="$repo_root/.github/workflows/prepare-release-notes.yml"
+generate_notes="$repo_root/scripts/generate-release-notes.mjs"
 if grep -Eq '^      (target_pr|from_tag):$' "$prepare_notes"; then
 	echo "Prepare release must expose only the official version input" >&2
 	exit 1
@@ -1137,6 +1154,7 @@ grep -Fq 'branch="release-notes/v${VERSION}"' "$prepare_notes"
 grep -Fq 'GitHub Actions could not open the PR; the reviewed branch is preserved.' "$prepare_notes"
 grep -Fq 'gh pr create --repo ${{ github.repository }} --base main-v2 --head $RELEASE_NOTES_BRANCH --fill' "$prepare_notes"
 grep -Eq 'GITHUB_STEP_SUMMARY' "$prepare_notes"
+grep -Fq 'thinking: { type: "disabled" }' "$generate_notes"
 
 desktop_candidate_resolver="$repo_root/scripts/resolve-desktop-candidate.sh"
 test -x "$desktop_candidate_resolver"
@@ -1543,8 +1561,32 @@ if EVENT_NAME=workflow_dispatch IN_ORCHESTRATED=false IN_CHANNEL=stable IN_BASE_
 fi
 grep -Eq 'does not match requested version' "$test_root/npm-mismatch.log"
 
+e2e_workflow="$repo_root/.github/workflows/e2e-bot.yml"
+grep -Fq 'INX_HOME: ${{ runner.temp }}/inx-e2e-home' "$e2e_workflow"
+grep -Fq 'cp /tmp/inx-e2e.toml "$INX_HOME/config.toml"' "$e2e_workflow"
+grep -Fq "printf 'DEEPSEEK_API_KEY=%s\\n' \"\$DEEPSEEK_API_KEY\" > \"\$INX_HOME/.env\"" "$e2e_workflow"
+grep -Fq 'const unsuccessful = results.filter((result) => !result.Passed || result.Skipped);' "$e2e_workflow"
+grep -Fq "if: always() && hashFiles('report.md') != ''" "$e2e_workflow"
+if grep -A2 -F 'missing DEEPSEEK_API_KEY secret' "$e2e_workflow" | grep -Fq 'exit 0'; then
+	echo "e2e bot still treats a missing provider secret as success" >&2
+	exit 1
+fi
+
 node --test "$repo_root/npm/publish.test.mjs"
 node --test "$repo_root/scripts/finalize-npm-official-release.test.mjs"
 bash "$repo_root/scripts/release-stable.test.sh"
+bash "$repo_root/scripts/check-docs-impact.test.sh"
+
+# Every current publisher must gate on the same compiled docs identity, and
+# each build path must stamp that identity into its shipped binary.
+for workflow in release.yml release-npm.yml release-desktop.yml; do
+	grep -Fq 'bash scripts/verify-embedded-docs.sh "$DOCS_BUILD_VERSION"' \
+		"$repo_root/.github/workflows/$workflow"
+done
+grep -Fq 'inx/internal/productdocs.linkedVersion={{ .Tag }}' "$repo_root/.goreleaser.yaml"
+grep -Fq 'inx/internal/productdocs.linkedRevision={{ .Commit }}' "$repo_root/.goreleaser.yaml"
+grep -Fq 'inx/internal/productdocs.linkedVersion=${binaryVersion}' "$repo_root/npm/build.mjs"
+grep -Fq 'product_docs_ldflags="-X inx/internal/productdocs.linkedVersion=$VERSION' \
+	"$repo_root/scripts/desktop-build.sh"
 
 echo "release workflow contract tests: PASS"

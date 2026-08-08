@@ -9,9 +9,10 @@ import (
 
 // displayPath rewrites absolute paths for safe reports:
 //   - under workspace → <workspace>/...
-//   - under home → ~/...
+//   - under Inx home → <inx-home>/...
+//   - under OS home → ~/...
 //   - elsewhere → <external>/basename (no full external path, no username)
-func displayPath(p, workspace, home string) string {
+func displayPath(p, workspace, home, inxHome string) string {
 	p = strings.TrimSpace(p)
 	if p == "" {
 		return ""
@@ -34,6 +35,18 @@ func displayPath(p, workspace, home string) string {
 		}
 		if rel, err := filepath.Rel(ws, clean); err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
 			return "<workspace>/" + filepath.ToSlash(rel)
+		}
+	}
+	if rh := strings.TrimSpace(inxHome); rh != "" {
+		if abs, err := filepath.Abs(rh); err == nil {
+			rh = abs
+		}
+		rh = filepath.Clean(rh)
+		if clean == rh {
+			return "<inx-home>"
+		}
+		if rel, err := filepath.Rel(rh, clean); err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
+			return "<inx-home>/" + filepath.ToSlash(rel)
 		}
 	}
 	if home == "" {

@@ -3,10 +3,14 @@ package config
 import (
 	"fmt"
 	"log/slog"
+	"maps"
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
+
+	"github.com/BurntSushi/toml"
 
 	"inx/internal/fileutil"
 	fileencoding "inx/internal/fileutil/encoding"
@@ -28,7 +32,7 @@ func Load() (*Config, error) {
 // changing the process cwd, while provider keys stay rooted in Inx home.
 //
 // Note: LoadForRoot may rewrite legacy MCP `tier` lines on disk (see
-// mergeRuntimeTOMLFile). Callers that must not mutate config files should use
+// mergeRuntimeTOMLFileSnapshot). Callers that must not mutate config files should use
 // LoadForRootReadOnly instead.
 func LoadForRoot(root string) (*Config, error) {
 	return loadForRoot(root, true)
@@ -48,8 +52,12 @@ func LoadForRootReadOnly(root string) (*Config, error) {
 func LoadUserConfigReadOnly() (*Config, error) {
 	cfg := Default()
 	if path := userConfigLoadPath(); path != "" {
-		if err := mergeFile(cfg, path); err != nil {
+		meta, err := mergeFileSnapshot(cfg, path)
+		if err != nil {
 			return nil, err
+		}
+		if meta.IsDefined("agent", "system_prompt_file") {
+			cfg.systemPromptFileSource = promptFileSourceUser
 		}
 	}
 	normalizeConfigForEdit(cfg)
@@ -76,16 +84,17 @@ func loadForRoot(root string, migrateOnDisk bool) (*Config, error) {
 		return nil, err
 	}
 
-	mergeTOML := mergeFile
+	mergeTOML := mergeFileSnapshot
 	if migrateOnDisk {
-		mergeTOML = mergeRuntimeTOMLFile
+		mergeTOML = mergeRuntimeTOMLFileSnapshot
 	}
 
 	var tomlSources []string
 	userDefaultModelExplicit := false
 	if uc := userConfigLoadPath(); uc != "" {
 		tomlSources = append(tomlSources, uc)
-		if err := mergeTOML(cfg, uc); err != nil {
+		meta, err := mergeTOML(cfg, uc)
+		if err != nil {
 			// Never rewrite the broken original file. Prefer the last verified
 			// snapshot in memory, then built-in defaults, and keep loading so
 			// the rest of the app stays usable.
@@ -105,8 +114,16 @@ func loadForRoot(root string, migrateOnDisk bool) (*Config, error) {
 				))
 			}
 		} else {
-			userDefaultModelExplicit = tomlFileDefinesKey(uc, "default_model")
+			userDefaultModelExplicit = meta.IsDefined("default_model")
+			if meta.IsDefined("agent", "system_prompt_file") {
+				cfg.systemPromptFileSource = promptFileSourceUser
+			}
 		}
+	}
+	// A last-known-good recovery is still trusted user configuration even though
+	// the broken source file cannot provide usable TOML metadata.
+	if cfg.systemPromptFileSource == promptFileSourceUnknown && cfg.Agent.SystemPromptFile != "" {
+		cfg.systemPromptFileSource = promptFileSourceUser
 	}
 	userDefaultModel := cfg.DefaultModel
 	globalCLI := cfg.CLI
@@ -117,7 +134,8 @@ func loadForRoot(root string, migrateOnDisk bool) (*Config, error) {
 	globalTelemetry := cfg.Telemetry
 
 	tomlSources = append(tomlSources, projectTOML)
-	if err := mergeTOML(cfg, projectTOML); err != nil {
+	projectMeta, err := mergeTOML(cfg, projectTOML)
+	if err != nil {
 		// Project config damage is isolated to this workspace: continue with
 		// user/global config so other tabs stay available.
 		cfg.addLoadWarning(fmt.Sprintf(
@@ -127,6 +145,8 @@ func loadForRoot(root string, migrateOnDisk bool) (*Config, error) {
 		// Drop the project path from later multi-file merges so a broken TOML
 		// cannot fail plugin/provider re-merges.
 		tomlSources = tomlSources[:len(tomlSources)-1]
+	} else if projectMeta.IsDefined("agent", "system_prompt_file") {
+		cfg.systemPromptFileSource = promptFileSourceProject
 	}
 	// The native CLI update channel controls the one user-installed binary.
 	// A repository-local inx.toml must never switch that global choice.
@@ -260,9 +280,7 @@ func cloneStringMap(in map[string]string) map[string]string {
 		return nil
 	}
 	out := make(map[string]string, len(in))
-	for k, v := range in {
-		out[k] = v
-	}
+	maps.Copy(out, in)
 	return out
 }
 
@@ -306,6 +324,14 @@ func tomlFileDefinesKey(path string, key ...string) bool {
 		return false
 	}
 	return meta.IsDefined(key...)
+}
+
+// ConfigFileDefinesCompactRatio reports whether path explicitly overrides the
+// automatic compaction threshold. It is used by config surfaces that need to
+// explain whether the effective value came from defaults, user config, or the
+// current project.
+func ConfigFileDefinesCompactRatio(path string) bool {
+	return tomlFileDefinesKey(path, "agent", "compact_ratio")
 }
 
 // backfillDeepSeekPro restores deepseek-pro for configs the pre-fix setup wizard
@@ -364,6 +390,7 @@ func backfillDeepSeekOfficialPrices(c *Config) {
 		if officialProviderKind(p) != "deepseek" {
 			continue
 		}
+		backfillDeepSeekOfficialEndpointDefaults(p)
 		currency := c.DeepSeekOfficialPricingCurrency()
 		if c.DesktopCurrency() == "" && p.persistedOfficialCurrency != "" {
 			currency = p.persistedOfficialCurrency
@@ -381,6 +408,25 @@ func backfillDeepSeekOfficialPrices(c *Config) {
 			}
 		}
 	}
+}
+
+// backfillDeepSeekOfficialEndpointDefaults restores the two official-endpoint
+// fields a config may legitimately omit. Both are safe to infer here precisely
+// because the caller already matched api.deepseek.com: the wallet endpoint is
+// the vendor's own, and 1M is that vendor's real window. Values the file
+// declares are never overwritten.
+//
+// This is keyed on the endpoint rather than on list position, so it cannot leak
+// onto a custom provider the way the previous positional decode overlay did
+// (#7357, #7358).
+func backfillDeepSeekOfficialEndpointDefaults(p *ProviderEntry) {
+	if p == nil {
+		return
+	}
+	if strings.TrimSpace(p.BalanceURL) == "" {
+		p.BalanceURL = "https://api.deepseek.com/user/balance"
+	}
+	backfillOfficialContextWindow(p, 1_000_000)
 }
 
 func officialProviderKind(p *ProviderEntry) string {
@@ -519,6 +565,7 @@ func mergeTOMLProviderAccess(paths []string) ([]string, bool, error) {
 	var merged []string
 	seen := map[string]bool{}
 	saw := false
+	userDeclared := false
 	for _, path := range paths {
 		_, exists, err := statConfigPath(path)
 		if err != nil {
@@ -542,6 +589,9 @@ func mergeTOMLProviderAccess(paths []string) ([]string, bool, error) {
 			merged = []string{}
 		}
 		saw = true
+		if isUserConfigPath(path) {
+			userDeclared = true
+		}
 		for _, name := range f.Desktop.ProviderAccess {
 			name = strings.TrimSpace(name)
 			if name == "" || seen[name] {
@@ -550,6 +600,11 @@ func mergeTOMLProviderAccess(paths []string) ([]string, bool, error) {
 			seen[name] = true
 			merged = append(merged, name)
 		}
+	}
+	// An undeclared user list means "allow all"; a union with a project-only
+	// list would silently narrow that to whatever the project happens to name.
+	if saw && !userDeclared {
+		return nil, false, nil
 	}
 	return merged, saw, nil
 }
@@ -739,29 +794,47 @@ func loadDotEnvForEditPath(path string) {
 
 // mergeFile decodes a TOML file onto cfg if it exists. An absent file is not an error.
 func mergeFile(cfg *Config, path string) error {
+	_, err := mergeFileSnapshot(cfg, path)
+	return err
+}
+
+// mergeFileSnapshot decodes one immutable read of a TOML file onto cfg and
+// returns metadata from those exact bytes. Callers that derive source or
+// precedence decisions from metadata must use this result instead of reading
+// the path again: a config file may be atomically replaced between reads.
+func mergeFileSnapshot(cfg *Config, path string) (toml.MetaData, error) {
+	return mergeFileSnapshotWithRead(cfg, path, fileencoding.ReadFileUTF8)
+}
+
+func mergeFileSnapshotWithRead(cfg *Config, path string, readFile func(string) ([]byte, error)) (toml.MetaData, error) {
 	resolved, exists, err := statConfigPath(path)
 	if err != nil {
-		return err
+		return toml.MetaData{}, err
 	}
 	if !exists {
-		return nil
+		return toml.MetaData{}, nil
+	}
+	data, err := readFile(resolved)
+	if err != nil {
+		return toml.MetaData{}, fmt.Errorf("config %s: %w", path, err)
 	}
 	// BurntSushi/toml decodes struct fields incrementally and can leave earlier
 	// fields mutated when a later value has the wrong type. Validate the complete
-	// file against a disposable Config before merging it into the active object.
-	// This makes user LKG fallback and project-level isolation transactional.
+	// snapshot against a disposable Config before merging those same bytes into
+	// the active object. This makes user LKG fallback, project-level isolation,
+	// and metadata-derived provenance transactional with respect to file changes.
 	var validated Config
-	if _, err := decodeTOMLFileResolved(resolved, &validated); err != nil {
-		return fmt.Errorf("config %s: %w", path, err)
+	if _, err := decodeTOMLBytes(data, &validated); err != nil {
+		return toml.MetaData{}, fmt.Errorf("config %s: %w", path, err)
 	}
-	meta, err := decodeTOMLFileResolved(resolved, cfg)
+	meta, err := decodeTOMLBytes(data, cfg)
 	if err != nil {
-		return fmt.Errorf("config %s: %w", path, err)
+		return toml.MetaData{}, fmt.Errorf("config %s: %w", path, err)
 	}
 	if meta.IsDefined("providers") {
 		var persisted Config
-		if _, err := decodeTOMLFileResolved(resolved, &persisted); err != nil {
-			return fmt.Errorf("config %s: %w", path, err)
+		if _, err := decodeTOMLBytes(data, &persisted); err != nil {
+			return toml.MetaData{}, fmt.Errorf("config %s: %w", path, err)
 		}
 		markPersistedDeepSeekOfficialPricing(&persisted)
 		markers := map[string]string{}
@@ -772,16 +845,16 @@ func mergeFile(cfg *Config, path string) error {
 			cfg.Providers[i].persistedOfficialCurrency = markers[providerMergeKey(cfg.Providers[i])]
 		}
 	}
-	return nil
+	return meta, nil
 }
 
-func mergeRuntimeTOMLFile(cfg *Config, path string) error {
+func mergeRuntimeTOMLFileSnapshot(cfg *Config, path string) (toml.MetaData, error) {
 	if _, err := os.Stat(path); err == nil {
 		if err := migrateLegacyMCPTiersFile(path); err != nil {
 			slog.Warn("config: legacy mcp tier migration failed", "path", path, "err", err)
 		}
 	}
-	return mergeFile(cfg, path)
+	return mergeFileSnapshot(cfg, path)
 }
 
 // normalizeLegacyMCPTiers keeps loaded legacy config files on the new product
@@ -1873,15 +1946,11 @@ func mergeModelLists(primary, extra []string) []string {
 
 func firstKnownModel(current string, models []string, fallback string) string {
 	current = strings.TrimSpace(current)
-	for _, model := range models {
-		if model == current {
-			return current
-		}
+	if slices.Contains(models, current) {
+		return current
 	}
-	for _, model := range models {
-		if model == fallback {
-			return fallback
-		}
+	if slices.Contains(models, fallback) {
+		return fallback
 	}
 	if len(models) > 0 {
 		return models[0]

@@ -11,7 +11,7 @@ try {
   console.error(
     `inx: no prebuilt binary for ${process.platform}-${process.arch}.\n` +
       `Install the matching optional package (${pkg}), or build from source:\n` +
-      `  https://github.com/naamfung/inx`,
+      `  https://github.com/esengine/DeepSeek-Inx`,
   );
   process.exit(1);
 }

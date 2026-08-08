@@ -63,7 +63,7 @@ func TestGenManifest(t *testing.T) {
 		"Inx-linux-amd64.tar.gz",
 		"Inx-linux-amd64.deb",            // human download, not the updater channel
 		"Inx-linux-amd64.tar.gz.minisig", // must be skipped
-		"README.txt",                     // unmatched, must be skipped
+		"README.txt",                          // unmatched, must be skipped
 	}
 	for _, n := range names {
 		if err := os.WriteFile(filepath.Join(dir, n), []byte(n), 0o644); err != nil {
@@ -99,7 +99,7 @@ func TestGenManifest(t *testing.T) {
 	if !ok {
 		t.Fatal("windows-amd64 missing")
 	}
-	wantURL := "https://github.com/naamfung/inx/releases/download/desktop-v1.2.0/Inx-windows-amd64-installer.exe"
+	wantURL := "https://github.com/esengine/DeepSeek-Inx/releases/download/desktop-v1.2.0/Inx-windows-amd64-installer.exe"
 	if win.URL != wantURL {
 		t.Fatalf("windows url = %q, want %q", win.URL, wantURL)
 	}
@@ -190,7 +190,7 @@ func TestGenManifestIgnoresUnknownNativePackages(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	t.Setenv("GITHUB_REPOSITORY", "naamfung/inx")
+	t.Setenv("GITHUB_REPOSITORY", "esengine/DeepSeek-Inx")
 	if err := genManifest(dir, "v1.2.0", "desktop-v1.2.0"); err != nil {
 		t.Fatalf("genManifest: %v", err)
 	}

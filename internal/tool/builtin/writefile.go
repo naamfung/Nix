@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 
 	fileenc "inx/internal/fileutil/encoding"
@@ -57,17 +58,17 @@ func (w writeFile) Execute(ctx context.Context, args json.RawMessage) (string, e
 		return "", err
 	}
 	// Preserve the existing file's encoding (GBK/UTF-16/BOM) on overwrite instead
-	// of always writing UTF-8, which would silently corrupt a non-UTF-8 file.
-	// readFileEncoded returns enc=UTF8 for a missing file — the right default for
-	// a newly created one.
-	existing, enc, rerr := readFileEncoded(p.Path)
-	if rerr == nil && existing == p.Content {
+	// of always writing UTF-8, which would silently corrupt a non-UTF-8 file. A
+	// missing file yields enc=UTF8 — the right default for a new one. Reading via
+	// the overlay makes the no-op check see the same buffer Preview does.
+	src, rerr := readEditSource(ctx, w.overlay, p.Path)
+	if rerr == nil && src.content == p.Content {
 		return fmt.Sprintf("%s already contains the exact content; no changes made", p.Path), nil
 	}
 	// The host overlay applies the write to the editor buffer and the file in
 	// one step. Text-only, so it handles plain UTF-8 targets (and new files);
 	// non-UTF-8 files stay on the local encoding-preserving path below.
-	if w.overlay != nil && filepath.IsAbs(p.Path) && (rerr != nil || enc == fileenc.UTF8) {
+	if w.overlay != nil && filepath.IsAbs(p.Path) && (rerr != nil || src.enc == fileenc.UTF8) {
 		if ok, werr := w.overlay.WriteTextFile(ctx, p.Path, p.Content); ok {
 			if werr != nil {
 				return "", fmt.Errorf("write %s: %w", p.Path, werr)
@@ -75,15 +76,13 @@ func (w writeFile) Execute(ctx context.Context, args json.RawMessage) (string, e
 			return fmt.Sprintf("wrote %d bytes to %s", len(p.Content), p.Path), nil
 		}
 	}
-
-	// Try creating directories with path variants for Windows paths under Unix-style shells.
-	writePath, merr := tryMkdirAllVariants(tryWinPathVariants(p.Path))
-	if merr != nil {
-		return "", fmt.Errorf("mkdir %s: %w", filepath.Dir(p.Path), merr)
+	if dir := filepath.Dir(p.Path); dir != "" && dir != "." {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return "", fmt.Errorf("mkdir %s: %w", dir, err)
+		}
 	}
-
-	if err := writeFileEncoded(writePath, p.Content, enc); err != nil {
-		return "", fmt.Errorf("write %s: %w", writePath, err)
+	if err := writeFileEncoded(p.Path, p.Content, src.enc); err != nil {
+		return "", fmt.Errorf("write %s: %w", p.Path, err)
 	}
-	return fmt.Sprintf("wrote %d bytes to %s", len(p.Content), writePath), nil
+	return fmt.Sprintf("wrote %d bytes to %s", len(p.Content), p.Path), nil
 }

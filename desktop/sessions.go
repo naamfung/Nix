@@ -60,6 +60,12 @@ func loadSessionTitles(dir string) map[string]string {
 		return m
 	}
 	_ = json.Unmarshal(b, &m)
+	// Older builds could persist titles polluted with internal wrappers
+	// (memory-compiler contracts, transient blocks) — clean at the read
+	// boundary; UserPreviewText is a no-op on clean titles (#5666).
+	for key, title := range m {
+		m[key] = agent.UserPreviewText(title)
+	}
 	return m
 }
 
@@ -348,7 +354,7 @@ func reserveUniqueSessionTrashItemDir(dir, key string) (string, error) {
 		return "", err
 	}
 	stem := strings.TrimSuffix(key, ".jsonl")
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		name := fmt.Sprintf("%s.jsonl-deleted-%d-%02d", stem, time.Now().UnixNano(), i)
 		itemDir := filepath.Join(root, name)
 		if err := os.Mkdir(itemDir, 0o755); err == nil {
@@ -640,12 +646,14 @@ func isRenameCrossDeviceOrBusy(err error) bool {
 		return false
 	}
 	// Cross-device link.
-	if le, ok := err.(*os.LinkError); ok {
-		if le.Err == syscall.EXDEV {
+	le := &os.LinkError{}
+	if errors.As(err, &le) {
+		if errors.Is(le.Err, syscall.EXDEV) {
 			return true
 		}
 		// Windows: "The process cannot access the file because it is being used by another process."
-		if errno, ok := le.Err.(syscall.Errno); ok {
+		var errno syscall.Errno
+		if errors.As(le.Err, &errno) {
 			return errno == 32 // ERROR_SHARING_VIOLATION
 		}
 	}
@@ -993,7 +1001,7 @@ func loadSessionPlannerDisplaysForUpdate(dir string) (sessionPlannerDisplayMap, 
 		return nil, err
 	}
 	if err := json.Unmarshal(b, &m); err != nil {
-		return nil, fmt.Errorf("%w: %v", errCorruptSessionPlannerDisplay, err)
+		return nil, fmt.Errorf("%w: %w", errCorruptSessionPlannerDisplay, err)
 	}
 	if m == nil {
 		m = sessionPlannerDisplayMap{}

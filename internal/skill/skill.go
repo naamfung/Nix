@@ -19,6 +19,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
@@ -134,7 +135,7 @@ func IsValidName(name string) bool { return config.IsValidSkillName(name) }
 // config.InxHomeDir(), or HomeDir/.inx when HomeDir is explicitly set.
 type Options struct {
 	HomeDir          string
-	InxHomeDir       string
+	InxHomeDir  string
 	ProjectRoot      string
 	CustomPaths      []string
 	PluginPaths      map[string][]string // canonical custom root -> installed plugin package names
@@ -155,7 +156,7 @@ type Options struct {
 // Store resolves skills across the configured roots.
 type Store struct {
 	homeDir          string
-	inxHomeDir       string
+	inxHomeDir  string
 	projectRoot      string
 	customPaths      []string
 	pluginPaths      map[string][]string
@@ -213,7 +214,7 @@ func New(opts Options) *Store {
 	}
 	return &Store{
 		homeDir:          home,
-		inxHomeDir:       inxHome,
+		inxHomeDir:  inxHome,
 		projectRoot:      root,
 		customPaths:      custom,
 		pluginPaths:      pluginPaths,
@@ -514,12 +515,7 @@ func normalizePluginPaths(paths map[string][]string) map[string][]string {
 }
 
 func stringSliceContains(items []string, want string) bool {
-	for _, item := range items {
-		if item == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(items, want)
 }
 
 // Roots exposes the discovery directories with their status for `/skill paths`.
@@ -1019,12 +1015,7 @@ func frontmatterHasSkillMarkerKey(content string) bool {
 }
 
 func isSkillMarkerFrontmatterKey(key string) bool {
-	for _, marker := range skillMarkerFrontmatterKeys {
-		if key == marker {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(skillMarkerFrontmatterKeys, key)
 }
 
 // Create scaffolds a new skill stub at the chosen scope. Refuses to overwrite.
@@ -1291,7 +1282,7 @@ func parseCSVFrontmatter(raw string) []string {
 		raw = strings.TrimSpace(raw[1 : len(raw)-1])
 	}
 	var out []string
-	for _, p := range strings.Split(raw, ",") {
+	for p := range strings.SplitSeq(raw, ",") {
 		if t := strings.Trim(strings.TrimSpace(p), `"'`); t != "" {
 			out = append(out, t)
 		}

@@ -17,7 +17,7 @@ function cliAssets(tag, missing = []) {
   const skip = new Set(missing);
   return CLI_RELEASE_ASSETS.filter((name) => !skip.has(name)).map((name) => ({
     name,
-    browser_download_url: `https://github.com/naamfung/inx/releases/download/${tag}/${name}`,
+    browser_download_url: `https://github.com/esengine/DeepSeek-Reasonix/releases/download/${tag}/${name}`,
     size: 42,
   }));
 }
@@ -25,27 +25,27 @@ function cliAssets(tag, missing = []) {
 const desktopSHA256 = "a".repeat(64);
 
 function desktopManifest(version, base) {
-  const releaseBase = base || `https://dl.inx.io/desktop-${version}/`;
+  const releaseBase = base || `https://dl.reasonix.io/desktop-${version}/`;
   const asset = (name) => {
     const url = releaseBase + name;
     return { url, sig: `${url}.minisig`, size: 42, sha256: desktopSHA256 };
   };
   return {
     version,
-    download_page: "https://inx.io/?download=desktop#start",
+    download_page: "https://reasonix.io/?download=desktop#start",
     platforms: {
-      "darwin-arm64": asset("Inx-darwin-arm64.zip"),
-      "darwin-amd64": asset("Inx-darwin-amd64.zip"),
-      "windows-amd64": asset("Inx-windows-amd64-installer.exe"),
-      "windows-arm64": asset("Inx-windows-arm64-installer.exe"),
-      "linux-amd64": asset("Inx-linux-amd64.tar.gz"),
+      "darwin-arm64": asset("Reasonix-darwin-arm64.zip"),
+      "darwin-amd64": asset("Reasonix-darwin-amd64.zip"),
+      "windows-amd64": asset("Reasonix-windows-amd64-installer.exe"),
+      "windows-arm64": asset("Reasonix-windows-arm64-installer.exe"),
+      "linux-amd64": asset("Reasonix-linux-amd64.tar.gz"),
     },
     native_packages: {
-      "linux-amd64": asset("Inx-linux-amd64.deb"),
+      "linux-amd64": asset("Reasonix-linux-amd64.deb"),
     },
     downloads: {
-      "Inx-darwin-universal.dmg": asset("Inx-darwin-universal.dmg"),
-      "Inx-windows-amd64.zip": asset("Inx-windows-amd64.zip"),
+      "Reasonix-darwin-universal.dmg": asset("Reasonix-darwin-universal.dmg"),
+      "Reasonix-windows-amd64.zip": asset("Reasonix-windows-amd64.zip"),
     },
   };
 }
@@ -53,14 +53,14 @@ function desktopManifest(version, base) {
 function desktopGitHubRelease(version = "v1.17.21") {
   const tag = `desktop-${version}`;
   const names = [
-    "Inx-darwin-arm64.zip",
-    "Inx-darwin-amd64.zip",
-    "Inx-windows-amd64-installer.exe",
-    "Inx-windows-arm64-installer.exe",
-    "Inx-linux-amd64.tar.gz",
-    "Inx-linux-amd64.deb",
-    "Inx-darwin-universal.dmg",
-    "Inx-windows-amd64.zip",
+    "Reasonix-darwin-arm64.zip",
+    "Reasonix-darwin-amd64.zip",
+    "Reasonix-windows-amd64-installer.exe",
+    "Reasonix-windows-arm64-installer.exe",
+    "Reasonix-linux-amd64.tar.gz",
+    "Reasonix-linux-amd64.deb",
+    "Reasonix-darwin-universal.dmg",
+    "Reasonix-windows-amd64.zip",
   ];
   return {
     tag_name: tag,
@@ -68,7 +68,7 @@ function desktopGitHubRelease(version = "v1.17.21") {
     prerelease: false,
     assets: names.map((name) => ({
       name,
-      browser_download_url: `https://github.com/naamfung/inx/releases/download/${tag}/${name}`,
+      browser_download_url: `https://github.com/esengine/DeepSeek-Reasonix/releases/download/${tag}/${name}`,
       size: 42,
     })),
   };
@@ -79,9 +79,9 @@ function copy(value) {
 }
 
 test("CLI always emits the official upgrade command", () => {
-  assert.equal(cliUpgradeCommand("stable"), "inx upgrade");
-  assert.equal(cliUpgradeCommand("preview"), "inx upgrade");
-  assert.equal(cliUpgradeCommand("canary"), "inx upgrade");
+  assert.equal(cliUpgradeCommand("stable"), "reasonix upgrade");
+  assert.equal(cliUpgradeCommand("preview"), "reasonix upgrade");
+  assert.equal(cliUpgradeCommand("canary"), "reasonix upgrade");
 });
 
 test("release labels use a complete version or a readable fallback", () => {
@@ -124,7 +124,7 @@ test("CLI selection rejects incomplete releases instead of synthesizing asset UR
     {
       tag_name: "v1.20.0",
       prerelease: false,
-      assets: cliAssets("v1.20.0", ["inx-windows-arm64.zip", "SHA256SUMS"]),
+      assets: cliAssets("v1.20.0", ["reasonix-windows-arm64.zip", "SHA256SUMS"]),
     },
     {
       tag_name: "v1.19.5",
@@ -137,8 +137,8 @@ test("CLI selection rejects incomplete releases instead of synthesizing asset UR
   const model = cliReleaseModel(releases, "stable");
   assert.equal(model?.displayVersion, "1.19.5");
   assert.equal(
-    model?.assets["inx-windows-arm64.zip"],
-    "https://github.com/naamfung/inx/releases/download/v1.19.5/inx-windows-arm64.zip",
+    model?.assets["reasonix-windows-arm64.zip"],
+    "https://github.com/esengine/DeepSeek-Reasonix/releases/download/v1.19.5/reasonix-windows-arm64.zip",
   );
   assert.equal(cliReleaseModel([releases[0]], "stable"), null);
 });
@@ -168,13 +168,13 @@ test("CLI release links are derived from the validated canonical tag", () => {
   };
   assert.equal(
     cliReleaseModel([release], "stable")?.releaseURL,
-    "https://github.com/naamfung/inx/releases/tag/v1.18.0",
+    "https://github.com/esengine/DeepSeek-Reasonix/releases/tag/v1.18.0",
   );
   assert.equal(
     cliReleaseModel([release], "stable")?.changelogURL,
-    "https://inx.io/changelog/",
+    "https://reasonix.io/changelog/",
   );
-  release.release_notes_url = "https://inx.io/changelog/v1.18.0/";
+  release.release_notes_url = "https://reasonix.io/changelog/v1.18.0/";
   assert.equal(cliReleaseModel([release], "stable")?.changelogURL, release.release_notes_url);
 });
 
@@ -185,11 +185,11 @@ test("CLI assets reject spoofed hosts and cross-tag URLs", () => {
     assets: cliAssets("v1.18.0"),
   };
   const invalidURLs = [
-    "https://evil.invalid/naamfung/inx/releases/download/v1.20.0/inx-darwin-amd64.tar.gz",
-    "https://github.com@evil.invalid/naamfung/inx/releases/download/v1.20.0/inx-darwin-amd64.tar.gz",
-    "http://github.com/naamfung/inx/releases/download/v1.20.0/inx-darwin-amd64.tar.gz",
-    "https://github.com/naamfung/inx/releases/download/v1.19.0/inx-darwin-amd64.tar.gz",
-    "https://github.com/naamfung/inx/releases/download/v1.20.0/inx-darwin-arm64.tar.gz",
+    "https://evil.invalid/esengine/DeepSeek-Reasonix/releases/download/v1.20.0/reasonix-darwin-amd64.tar.gz",
+    "https://github.com@evil.invalid/esengine/DeepSeek-Reasonix/releases/download/v1.20.0/reasonix-darwin-amd64.tar.gz",
+    "http://github.com/esengine/DeepSeek-Reasonix/releases/download/v1.20.0/reasonix-darwin-amd64.tar.gz",
+    "https://github.com/esengine/DeepSeek-Reasonix/releases/download/v1.19.0/reasonix-darwin-amd64.tar.gz",
+    "https://github.com/esengine/DeepSeek-Reasonix/releases/download/v1.20.0/reasonix-darwin-arm64.tar.gz",
   ];
   const invalid = invalidURLs.map((browser_download_url) => {
     const release = {
@@ -233,46 +233,46 @@ test("Desktop manifests accept only official versions and old or unified asset b
   const stableR2 = desktopManifest("v1.18.0");
   assert.equal(desktopReleaseModel(stableR2, "stable")?.version, "v1.18.0");
   const githubBase =
-    "https://github.com/naamfung/inx/releases/download/desktop-v1.18.0/";
+    "https://github.com/esengine/DeepSeek-Reasonix/releases/download/desktop-v1.18.0/";
   const stableGitHub = desktopManifest("v1.18.0", githubBase);
   assert.equal(
-    desktopReleaseModel(stableGitHub, "stable")?.assets["Inx-linux-amd64.deb"],
-    `${githubBase}Inx-linux-amd64.deb`,
+    desktopReleaseModel(stableGitHub, "stable")?.assets["Reasonix-linux-amd64.deb"],
+    `${githubBase}Reasonix-linux-amd64.deb`,
   );
-  const unifiedBase = "https://github.com/naamfung/inx/releases/download/v1.18.0/";
-  assert.equal(desktopReleaseModel(desktopManifest("v1.18.0", unifiedBase))?.assets["Inx-linux-amd64.deb"], `${unifiedBase}Inx-linux-amd64.deb`);
+  const unifiedBase = "https://github.com/esengine/DeepSeek-Reasonix/releases/download/v1.18.0/";
+  assert.equal(desktopReleaseModel(desktopManifest("v1.18.0", unifiedBase))?.assets["Reasonix-linux-amd64.deb"], `${unifiedBase}Reasonix-linux-amd64.deb`);
 });
 
 test("Desktop manifests reject hostile URLs and incomplete integrity metadata", () => {
   const cases = [
     ["malicious host", (manifest) => {
-      const url = "https://evil.invalid/desktop-v1.18.0-preview.62/Inx-darwin-arm64.zip";
+      const url = "https://evil.invalid/desktop-v1.18.0-preview.62/Reasonix-darwin-arm64.zip";
       Object.assign(manifest.platforms["darwin-arm64"], { url, sig: `${url}.minisig` });
     }],
     ["userinfo", (manifest) => {
-      const url = "https://dl.inx.io@evil.invalid/desktop-v1.18.0-preview.62/Inx-darwin-arm64.zip";
+      const url = "https://dl.reasonix.io@evil.invalid/desktop-v1.18.0-preview.62/Reasonix-darwin-arm64.zip";
       Object.assign(manifest.platforms["darwin-arm64"], { url, sig: `${url}.minisig` });
     }],
     ["http", (manifest) => {
-      const url = "http://dl.inx.io/desktop-v1.18.0-preview.62/Inx-darwin-arm64.zip";
+      const url = "http://dl.reasonix.io/desktop-v1.18.0-preview.62/Reasonix-darwin-arm64.zip";
       Object.assign(manifest.platforms["darwin-arm64"], { url, sig: `${url}.minisig` });
     }],
     ["wrong channel path", (manifest) => {
-      const url = "https://dl.inx.io/preview/Inx-darwin-arm64.zip";
+      const url = "https://dl.reasonix.io/preview/Reasonix-darwin-arm64.zip";
       Object.assign(manifest.platforms["darwin-arm64"], { url, sig: `${url}.minisig` });
     }],
     ["wrong filename", (manifest) => {
-      const url = "https://dl.inx.io/desktop-v1.18.0-preview.62/Inx-darwin-amd64.zip";
+      const url = "https://dl.reasonix.io/desktop-v1.18.0-preview.62/Reasonix-darwin-amd64.zip";
       Object.assign(manifest.platforms["darwin-arm64"], { url, sig: `${url}.minisig` });
     }],
     ["missing platform", (manifest) => {
       delete manifest.platforms["windows-arm64"];
     }],
     ["missing website download", (manifest) => {
-      delete manifest.downloads["Inx-darwin-universal.dmg"];
+      delete manifest.downloads["Reasonix-darwin-universal.dmg"];
     }],
     ["invalid website download", (manifest) => {
-      manifest.downloads["Inx-windows-amd64.zip"].size = 0;
+      manifest.downloads["Reasonix-windows-amd64.zip"].size = 0;
     }],
     ["bad SHA", (manifest) => {
       manifest.platforms["darwin-arm64"].sha256 = "A".repeat(64);
@@ -305,7 +305,7 @@ test("Desktop manifests reject hostile URLs and incomplete integrity metadata", 
 
   const crossVersion = desktopManifest(
     "v1.18.0",
-    "https://dl.inx.io/desktop-v1.17.9/",
+    "https://dl.reasonix.io/desktop-v1.17.9/",
   );
   assert.equal(desktopReleaseModel(crossVersion, "stable"), null);
 });
@@ -315,8 +315,8 @@ test("Desktop Stable falls back to a complete exact GitHub Latest release", () =
   const model = desktopGitHubReleaseModel(release);
   assert.equal(model?.version, "v1.17.21");
   assert.equal(
-    model?.assets["Inx-darwin-universal.dmg"],
-    "https://github.com/naamfung/inx/releases/download/desktop-v1.17.21/Inx-darwin-universal.dmg",
+    model?.assets["Reasonix-darwin-universal.dmg"],
+    "https://github.com/esengine/DeepSeek-Reasonix/releases/download/desktop-v1.17.21/Reasonix-darwin-universal.dmg",
   );
 
   const invalid = [
@@ -327,7 +327,7 @@ test("Desktop Stable falls back to a complete exact GitHub Latest release", () =
   ];
   const spoofed = copy(release);
   spoofed.assets[0].browser_download_url =
-    "https://github.com.evil.invalid/naamfung/inx/releases/download/desktop-v1.17.21/Inx-darwin-arm64.zip";
+    "https://github.com.evil.invalid/esengine/DeepSeek-Reasonix/releases/download/desktop-v1.17.21/Reasonix-darwin-arm64.zip";
   invalid.push(spoofed);
   for (const candidate of invalid) assert.equal(desktopGitHubReleaseModel(candidate), null);
 });

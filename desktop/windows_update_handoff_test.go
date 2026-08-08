@@ -81,6 +81,8 @@ func TestWindowsInstallerScriptWaitsBeforeCopyingExecutable(t *testing.T) {
 	}
 	script := string(data)
 	for _, want := range []string{
+		`!define INX_LEGACY_UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\Inx"`,
+		`!define INX_LEGACY_PRODUCT_KEY "Software\inx\Inx"`,
 		`!define INX_UPDATE_HELPER "inx-update-helper.exe"`,
 		`!define INX_GUARD "inx-guard.exe"`,
 		`!define INX_LAUNCHER "inx-launcher.exe"`,
@@ -118,11 +120,15 @@ func TestWindowsInstallerScriptWaitsBeforeCopyingExecutable(t *testing.T) {
 		`File "/oname=${INX_UPDATE_HELPER}" "${INX_UPDATE_HELPER}"`,
 		`File "/oname=${INX_CLI}" "${INX_CLI}"`,
 		`File "/oname=${INX_LAYOUT_INSTALLER}" "${INX_GUARD}"`,
+		`nsExec::ExecToLog /OEM`,
+		`Inx layout activator output:`,
 		`--activate-staging "$R9" --no-relaunch`,
 		`File "/oname=${INX_PAYLOAD_MANIFEST}" "${INX_PAYLOAD_MANIFEST}"`,
 		`File "/oname=${INX_PAYLOAD_SIGNATURE}" "${INX_PAYLOAD_SIGNATURE}"`,
 		`Delete "$INSTDIR\${INX_UPDATE_HELPER}"`,
 		`Delete "$INSTDIR\${INX_CLI}"`,
+		`DeleteRegValue HKCU "${INX_LEGACY_PRODUCT_KEY}" ""`,
+		`!insertmacro inx.deleteLegacyInstallerStateIfOwned`,
 	} {
 		if !strings.Contains(script, want) {
 			t.Fatalf("project.nsi missing %q", want)
@@ -147,6 +153,17 @@ func TestWindowsInstallerScriptWaitsBeforeCopyingExecutable(t *testing.T) {
 	}
 	if strings.Contains(script, `FileOpen $0 "$INSTDIR\current.json" w`) {
 		t.Fatal("normal installer must delegate the current.json commit to the atomic Go activator")
+	}
+	writeCurrent := strings.Index(script, `!insertmacro inx.writeUninstaller`)
+	deleteLegacy := strings.Index(script, `!insertmacro inx.deleteLegacyInstallerStateIfOwned`)
+	if writeCurrent < 0 || deleteLegacy < 0 || writeCurrent > deleteLegacy {
+		t.Fatalf("installer must write the current uninstall entry before reconciling owned legacy state (write=%d delete=%d)", writeCurrent, deleteLegacy)
+	}
+	legacyMacro := script[strings.Index(script, `!macro inx.deleteLegacyInstallerStateIfOwned`):strings.Index(script, `!macro inx.deleteUninstaller`)]
+	deleteLegacyLocation := strings.Index(legacyMacro, `DeleteRegValue HKCU "${INX_LEGACY_PRODUCT_KEY}" ""`)
+	deleteLegacyAlias := strings.Index(legacyMacro, `DeleteRegKey HKCU "${INX_LEGACY_UNINST_KEY}"`)
+	if deleteLegacyLocation < 0 || deleteLegacyAlias < 0 || deleteLegacyLocation > deleteLegacyAlias {
+		t.Fatalf("installer must clear the same-root Tauri install-location breadcrumb before deleting its uninstall alias (location=%d alias=%d)", deleteLegacyLocation, deleteLegacyAlias)
 	}
 	metadataBranch := strings.Index(script, `inx_stage_payload:`)
 	metadataFile := strings.Index(script, `File "/oname=${INX_PAYLOAD_MANIFEST}"`)
@@ -212,6 +229,9 @@ func TestWindowsUpdateRequiresObservedHelperHandoff(t *testing.T) {
 		t.Fatal(err)
 	}
 	helperSource := string(helperData)
+	if !strings.Contains(helperSource, "reconcileWindowsUninstallRegistrationFn(installDir, toVersion)") {
+		t.Fatal("versioned Windows activation must refresh its managed uninstall registration")
+	}
 	if strings.Contains(helperSource, "installerCommandLine(installer, installDir), HideWindow: true") {
 		t.Fatal("update helper still hides the NSIS progress window")
 	}

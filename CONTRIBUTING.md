@@ -12,8 +12,8 @@ everything you need to get started.
 ## Getting started
 
 ```bash
-git clone https://github.com/esengine/DeepSeek-Reasonix.git
-cd DeepSeek-Reasonix
+git clone https://github.com/esengine/DeepSeek-Inx.git
+cd DeepSeek-Inx
 go build ./cmd/inx    # builds the CLI binary
 go test ./...              # runs the full test suite
 ```

@@ -17,8 +17,7 @@ import (
 
 // telemetry_app.go is the anonymous launch ping: one POST per app start carrying a
 // random install id, version, and OS facts — never conversation, key, or file data.
-// Gated on config desktop.telemetry (default off in this fork: no outbound requests
-// unless the user opts in) and skipped entirely in dev builds.
+// Gated on config desktop.telemetry (default on) and skipped entirely in dev builds.
 
 var pingEndpoint = "https://crash.inx.io/v1/ping"
 

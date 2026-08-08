@@ -26,6 +26,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"sync"
@@ -50,11 +51,14 @@ const (
 	// defaultBaseURL is the first-party endpoint; config may override it (e.g. a
 	// gateway). Bedrock/Vertex use a different request shape and are out of scope.
 	defaultBaseURL = "https://api.anthropic.com"
-	// defaultMaxTokens is the output ceiling used when the request leaves MaxTokens
-	// unset. Anthropic *requires* max_tokens, and the agent currently doesn't set
-	// it, so this is the de-facto cap. Generous (you only pay for tokens actually
-	// produced) and within every catalog model's limit (Sonnet/Haiku 64K, Opus 128K).
-	defaultMaxTokens = 32768
+	// defaultMaxTokens is the conservative output ceiling used when neither the
+	// provider config nor the request supplies one. Anthropic requires max_tokens,
+	// but support is model-specific, so native Anthropic and unknown compatible
+	// gateways must not inherit a universal 128K request.
+	defaultMaxTokens = provider.DefaultReasoningOutputTokens
+	// deepSeekDefaultMaxTokens is safe only for the official DeepSeek Anthropic-
+	// compatible endpoint, whose reasoning models support the higher ceiling.
+	deepSeekDefaultMaxTokens = provider.DefaultHighOutputTokens
 )
 
 func init() {
@@ -74,21 +78,8 @@ func New(cfg provider.Config) (provider.Provider, error) {
 	if baseURL == "" {
 		baseURL = defaultBaseURL
 	}
-	keyEnv, _ := cfg.Extra["api_key_env"].(string) // for actionable auth errors
-	keySource, _ := cfg.Extra["api_key_source"].(string)
-	thinking, _ := cfg.Extra["thinking"].(string)
-	thinking = strings.ToLower(strings.TrimSpace(thinking))
-	effort, _ := cfg.Extra["effort"].(string)
-	effort = strings.ToLower(strings.TrimSpace(effort))
-	vision, _ := cfg.Extra["vision"].(bool)
-	headers, _ := cfg.Extra["headers"].(map[string]string)
-	authHeader, _ := cfg.Extra["auth_header"].(bool)
-	httpClient, err := newHTTPClient(cfg)
-	if err != nil {
-		return nil, fmt.Errorf("anthropic: network: %w", err)
-	}
 	// Anthropic's API surface is at {root}/v1/messages, so c.baseURL stores
-	// the *root* — without any trailing /v1. The setup wizard, however, lets
+	// the *root* -- without any trailing /v1. The setup wizard, however, lets
 	// users paste a full OpenAI-compatible URL (e.g.
 	// "https://proxy.example.com/v1") because that's what /models probes
 	// expect. Stripping the trailing /v1 here makes both forms land on the
@@ -96,28 +87,55 @@ func New(cfg provider.Config) (provider.Provider, error) {
 	// root-vs-versioned split. Without this, a user pasting
 	// "https://proxy.example.com/v1" would probe /v1/models successfully
 	// but get the chat client concatenating onto
-	// "https://proxy.example.com/v1/v1/messages" — a 404.
+	// "https://proxy.example.com/v1/v1/messages" -- a 404.
 	root := strings.TrimRight(baseURL, "/")
 	root = strings.TrimSuffix(root, "/v1")
 	if root == "" {
 		root = defaultBaseURL
 	}
+	officialDeepSeek := openai.IsDeepSeek(root)
+	keyEnv, _ := cfg.Extra["api_key_env"].(string) // for actionable auth errors
+	keySource, _ := cfg.Extra["api_key_source"].(string)
+	thinking, _ := cfg.Extra["thinking"].(string)
+	thinking = strings.ToLower(strings.TrimSpace(thinking))
+	effort, _ := cfg.Extra["effort"].(string)
+	effort = strings.ToLower(strings.TrimSpace(effort))
+	vision, _ := cfg.Extra["vision"].(bool)
+	webSearch, _ := cfg.Extra["web_search"].(bool)
+	headers, _ := cfg.Extra["headers"].(map[string]string)
+	authHeader, _ := cfg.Extra["auth_header"].(bool)
+	maxOutputTokens, _ := cfg.Extra["max_output_tokens"].(int)
+	if maxOutputTokens <= 0 {
+		// Messages requires max_tokens, so an optional-budget disable request
+		// falls back to the provider's stable mandatory default.
+		maxOutputTokens = defaultMaxTokens
+		if officialDeepSeek {
+			maxOutputTokens = deepSeekDefaultMaxTokens
+		}
+	}
+	httpClient, err := newHTTPClient(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("anthropic: network: %w", err)
+	}
 	return &client{
-		name:        name,
-		apiKey:      cfg.APIKey,
-		keyEnv:      keyEnv,
-		keySource:   keySource,
-		baseURL:     root,
-		model:       cfg.Model,
-		deepseek:    openai.IsDeepSeek(root),
-		thinking:    thinking,
-		effort:      effort,
-		vision:      vision,
-		mimo:        provider.IsMiMoEndpoint(root),
-		headers:     cleanCustomHeaders(headers),
-		authHeader:  authHeader,
-		http:        httpClient, // no overall timeout; lifecycle is ctx-driven
-		idleTimeout: defaultStreamIdleTimeout,
+		name:             name,
+		apiKey:           cfg.APIKey,
+		keyEnv:           keyEnv,
+		keySource:        keySource,
+		baseURL:          root,
+		model:            cfg.Model,
+		nativeAnthropic:  strings.EqualFold(root, defaultBaseURL),
+		deepseek:         officialDeepSeek,
+		thinking:         thinking,
+		effort:           effort,
+		vision:           vision,
+		mimo:             provider.IsMiMoEndpoint(root),
+		webSearch:        webSearch,
+		headers:          cleanCustomHeaders(headers),
+		authHeader:       authHeader,
+		defaultMaxTokens: maxOutputTokens,
+		http:             httpClient, // no overall timeout; lifecycle is ctx-driven
+		idleTimeout:      defaultStreamIdleTimeout,
 	}, nil
 }
 
@@ -127,22 +145,25 @@ func newHTTPClient(cfg provider.Config) (*http.Client, error) {
 }
 
 type client struct {
-	name        string
-	apiKey      string
-	keyEnv      string // api_key_env name, surfaced in auth errors
-	keySource   string // source of keyEnv, surfaced in auth errors
-	baseURL     string
-	model       string
-	deepseek    bool   // official DeepSeek Anthropic endpoint: unsigned reasoning replay + automatic cache
-	thinking    string // "adaptive" enables extended thinking; "" = off (config-driven)
-	effort      string // output_config.effort: low|medium|high|xhigh|max; "" = provider default
-	vision      bool   // model accepts image input — embed attached images as base64 image blocks
-	mimo        bool   // true for MiMo — upgrades legacy tuple schemas to Draft 2020-12
-	headers     map[string]string
-	authHeader  bool // send Authorization: Bearer instead of Anthropic's x-api-key header
-	http        *http.Client
-	idleTimeout time.Duration // SSE stall watchdog window; defaultStreamIdleTimeout unless a test overrides
-	authed      atomic.Bool   // a request has succeeded — gate transient-401 retry
+	name             string
+	apiKey           string
+	keyEnv           string // api_key_env name, surfaced in auth errors
+	keySource        string // source of keyEnv, surfaced in auth errors
+	baseURL          string
+	model            string
+	nativeAnthropic  bool   // first-party endpoint: documented default-5m cache-write pricing applies
+	deepseek         bool   // official DeepSeek Anthropic endpoint: unsigned reasoning replay + automatic cache
+	thinking         string // "adaptive" enables extended thinking; "" = off (config-driven)
+	effort           string // output_config.effort: low|medium|high|xhigh|max; "" = provider default
+	vision           bool   // model accepts image input — embed attached images as base64 image blocks
+	mimo             bool   // true for MiMo — upgrades legacy tuple schemas to Draft 2020-12
+	webSearch        bool   // enable server-side web_search tool (DeepSeek Anthropic API)
+	headers          map[string]string
+	authHeader       bool // send Authorization: Bearer instead of Anthropic's x-api-key header
+	defaultMaxTokens int
+	http             *http.Client
+	idleTimeout      time.Duration // SSE stall watchdog window; defaultStreamIdleTimeout unless a test overrides
+	authed           atomic.Bool   // a request has succeeded — gate transient-401 retry
 }
 
 func (c *client) Name() string { return c.name }
@@ -248,9 +269,10 @@ var bufPool = sync.Pool{
 }
 
 func (c *client) Stream(ctx context.Context, req provider.Request) (<-chan provider.Chunk, error) {
+	requestCtx := provider.WithRequestAttemptCounter(ctx)
 	buf := bufPool.Get().(*bytes.Buffer)
 	buf.Reset()
-	if err := json.NewEncoder(buf).Encode(c.buildRequest(req)); err != nil {
+	if err := json.NewEncoder(buf).Encode(c.buildRequest(requestCtx, req)); err != nil {
 		bufPool.Put(buf)
 		return nil, fmt.Errorf("%s: marshal request: %w", c.name, err)
 	}
@@ -274,14 +296,14 @@ func (c *client) Stream(ctx context.Context, req provider.Request) (<-chan provi
 		applyCustomHeaders(httpReq.Header, c.headers)
 		return httpReq, nil
 	}
-	resp, err := provider.SendWithRetry(ctx, c.http, c.sendOpts(), newReq)
+	resp, err := provider.SendWithRetry(requestCtx, c.http, c.sendOpts(), newReq)
 	if err != nil {
 		return nil, provider.AnnotateToolSchemaError(err, req.Tools)
 	}
 	c.authed.Store(true)
 
 	out := make(chan provider.Chunk)
-	go c.readStream(ctx, resp, out)
+	go c.readStream(requestCtx, resp, out)
 	return out, nil
 }
 
@@ -290,7 +312,7 @@ func (c *client) Stream(ctx context.Context, req provider.Request) (<-chan provi
 // become `tool_use` blocks; RoleTool results become `tool_result` blocks in a user
 // turn. Consecutive same-role messages are coalesced because the API requires
 // alternating user/assistant turns (tool results are user turns).
-func (c *client) buildRequest(req provider.Request) anthRequest {
+func (c *client) buildRequest(_ context.Context, req provider.Request) anthRequest {
 	var system []textBlock
 	var msgs []anthMessage
 
@@ -363,6 +385,9 @@ func (c *client) buildRequest(req provider.Request) anthRequest {
 	}
 
 	var tools []anthTool
+	if c.webSearch {
+		tools = append(tools, anthTool{Type: "web_search_20250305", Name: "web_search"})
+	}
 	for _, t := range req.Tools {
 		schema := t.Parameters
 		if len(schema) == 0 {
@@ -380,7 +405,10 @@ func (c *client) buildRequest(req provider.Request) anthRequest {
 	// tools → system → messages, so a marker on the last system block caches
 	// tools+system together; with no system, mark the last tool. A marker on the
 	// last block of the last message caches the conversation prefix, accruing hits
-	// incrementally as turns are appended. Max 4 breakpoints; we use ≤2.
+	// incrementally as turns are appended. Max 4 breakpoints; we use ≤2. Keep
+	// Anthropic's default 5m TTL by omitting the ttl field. Besides being cheaper
+	// than the opt-in 1h write, this keeps provider-visible request bytes stable
+	// across turns, retries, and wall-clock timing.
 	if !c.deepseek {
 		if n := len(system); n > 0 {
 			system[n-1].CacheControl = ephemeral()
@@ -396,7 +424,10 @@ func (c *client) buildRequest(req provider.Request) anthRequest {
 
 	maxTokens := req.MaxTokens
 	if maxTokens <= 0 {
-		maxTokens = defaultMaxTokens
+		maxTokens = c.defaultMaxTokens
+		if maxTokens <= 0 {
+			maxTokens = defaultMaxTokens
+		}
 	}
 	r := anthRequest{
 		Model:     c.model,
@@ -538,7 +569,7 @@ func (c *client) readStream(ctx context.Context, resp *http.Response, out chan<-
 
 		var ev streamEvent
 		if err := json.Unmarshal([]byte(data), &ev); err != nil {
-			send(provider.Chunk{Type: provider.ChunkError, Err: fmt.Errorf("%s: decode stream: %w", c.name, err)})
+			send(provider.Chunk{Type: provider.ChunkError, Err: provider.StreamDecodeError(c.name, data, err)})
 			return
 		}
 
@@ -548,11 +579,27 @@ func (c *client) readStream(ctx context.Context, resp *http.Response, out chan<-
 				mergeUsage(ev.Message.Usage)
 			}
 		case "content_block_start":
-			if ev.ContentBlock != nil && ev.ContentBlock.Type == "tool_use" {
-				tc := &provider.ToolCall{ID: ev.ContentBlock.ID, Name: ev.ContentBlock.Name}
-				tools[ev.Index] = tc
-				if !send(provider.Chunk{Type: provider.ChunkToolCallStart, ToolCall: &provider.ToolCall{ID: tc.ID, Name: tc.Name}}) {
-					return
+			if ev.ContentBlock != nil {
+				switch ev.ContentBlock.Type {
+				case "tool_use":
+					tc := &provider.ToolCall{ID: ev.ContentBlock.ID, Name: ev.ContentBlock.Name}
+					tools[ev.Index] = tc
+					if !send(provider.Chunk{Type: provider.ChunkToolCallStart, ToolCall: &provider.ToolCall{ID: tc.ID, Name: tc.Name}}) {
+						return
+					}
+				case "web_search_tool_result":
+					// Search results are delivered inline in content_block.content as a
+					// JSON array of result objects (title, url, encrypted_content).
+					// Only the model sees the plain text; we surface titles and URLs.
+					// server_tool_use blocks (the model initiating the search) are
+					// intentionally skipped — the API executes them server-side and
+					// the results appear here.
+					formatted := formatWebSearchResults(ev.ContentBlock.Content)
+					if formatted != "" {
+						if !send(provider.Chunk{Type: provider.ChunkText, Text: formatted}) {
+							return
+						}
+					}
 				}
 			}
 		case "content_block_delta":
@@ -604,7 +651,11 @@ func (c *client) readStream(ctx context.Context, resp *http.Response, out chan<-
 			}
 			mergeUsage(ev.Usage)
 		case "message_stop":
-			// Stream complete; fall through to finalize below.
+			// Anthropic's terminal event. Tool blocks may already have closed;
+			// without this, the attempt stays speculative and is not committed.
+			// Stop reading immediately so a post-terminal connection reset cannot
+			// reclassify a complete response as interrupted.
+			goto finalize
 		case "error":
 			msg := "stream error"
 			if ev.Error != nil && ev.Error.Message != "" {
@@ -619,23 +670,45 @@ func (c *client) readStream(ctx context.Context, resp *http.Response, out chan<-
 		return
 	}
 	if stalled.Load() {
-		send(provider.Chunk{Type: provider.ChunkError, Err: fmt.Errorf("%s: stream stalled — no data for %s, connection likely dropped", c.name, idleTimeout)})
+		err := fmt.Errorf("%s: stream stalled — no data for %s, connection likely dropped", c.name, idleTimeout)
+		send(provider.Chunk{Type: provider.ChunkError, Err: provider.StreamInterrupt(err, provider.StreamInterruptIdleTimeout)})
 		return
 	}
 	if err := scanner.Err(); err != nil {
-		send(provider.Chunk{Type: provider.ChunkError, Err: fmt.Errorf("%s: read stream: %w", c.name, err)})
+		wrapped := fmt.Errorf("%s: read stream: %w", c.name, err)
+		if provider.IsConnReset(err) {
+			send(provider.Chunk{Type: provider.ChunkError, Err: provider.StreamInterrupt(wrapped, provider.ClassifyStreamInterrupt(err))})
+			return
+		}
+		send(provider.Chunk{Type: provider.ChunkError, Err: wrapped})
 		return
 	}
+	// EOF / clean close before message_stop is an uncommitted attempt. Complete
+	// ChunkToolCall blocks that arrived earlier remain speculative.
+	send(provider.Chunk{Type: provider.ChunkError, Err: provider.StreamInterrupt(
+		fmt.Errorf("%s: stream ended before message_stop: %w", c.name, io.ErrUnexpectedEOF),
+		provider.StreamInterruptPrematureEOF,
+	)})
+	return
 
+finalize:
 	if haveUsage {
-		if !send(provider.Chunk{Type: provider.ChunkUsage, Usage: &provider.Usage{
-			PromptTokens:     inTok + cacheCreate + cacheRead,
-			CompletionTokens: outTok,
-			TotalTokens:      inTok + cacheCreate + cacheRead + outTok,
-			CacheHitTokens:   cacheRead,
-			CacheMissTokens:  inTok + cacheCreate, // uncached input + cache writes (billed ≥1×)
-			FinishReason:     mapStopReason(stopReason),
-		}}) {
+		cacheWriteBilledTokens := 0.0
+		if cacheCreate > 0 && c.nativeAnthropic {
+			cacheWriteBilledTokens = float64(cacheCreate) * cacheWrite5MinuteInputMultiplier
+		}
+		usage := &provider.Usage{
+			PromptTokens:           inTok + cacheCreate + cacheRead,
+			CompletionTokens:       outTok,
+			TotalTokens:            inTok + cacheCreate + cacheRead + outTok,
+			CacheHitTokens:         cacheRead,
+			CacheMissTokens:        inTok + cacheCreate,
+			CacheWriteTokens:       cacheCreate,
+			CacheWriteBilledTokens: cacheWriteBilledTokens,
+			FinishReason:           mapStopReason(stopReason),
+		}
+		provider.ApplyRequestAttemptCount(ctx, usage)
+		if !send(provider.Chunk{Type: provider.ChunkUsage, Usage: usage}) {
 			return
 		}
 	}
@@ -671,7 +744,45 @@ func mapStopReason(s string) string {
 	}
 }
 
-// --- Messages API wire protocol ---
+// webSearchResult is a single result from a web_search_tool_result block.
+type webSearchResult struct {
+	URL      string `json:"url"`
+	Title    string `json:"title"`
+	Text     string `json:"text"`
+	SiteName string `json:"site_name"`
+}
+
+// formatWebSearchResults parses a web_search_tool_result content array
+// and formats titles and URLs as human-readable text. DeepSeek returns
+// encrypted_content rather than plain text at the transport layer; the
+// model still sees the original content.
+func formatWebSearchResults(raw json.RawMessage) string {
+	if len(raw) == 0 {
+		return ""
+	}
+	var results []webSearchResult
+	if err := json.Unmarshal(raw, &results); err != nil {
+		return ""
+	}
+	var b strings.Builder
+	for _, r := range results {
+		if r.Title == "" && r.URL == "" {
+			continue
+		}
+		fmt.Fprintf(&b, "\n- **%s**", r.Title)
+		if r.URL != "" {
+			fmt.Fprintf(&b, "\n  <%s>", r.URL)
+		}
+	}
+	if b.Len() == 0 {
+		return ""
+	}
+	return "\n" + b.String() + "\n"
+}
+
+// Messages API wire protocol
+
+const cacheWrite5MinuteInputMultiplier = 1.25
 
 func ephemeral() *cacheControl { return &cacheControl{Type: "ephemeral"} }
 
@@ -752,9 +863,10 @@ func toolResultBlocks(text string, images []string) []contentBlock {
 }
 
 type anthTool struct {
-	Name         string          `json:"name"`
+	Type         string          `json:"type,omitempty"` // "web_search" for server-side search; empty for named tools
+	Name         string          `json:"name,omitempty"`
 	Description  string          `json:"description,omitempty"`
-	InputSchema  json.RawMessage `json:"input_schema"`
+	InputSchema  json.RawMessage `json:"input_schema,omitempty"`
 	CacheControl *cacheControl   `json:"cache_control,omitempty"`
 }
 
@@ -766,17 +878,20 @@ type streamEvent struct {
 		Usage *wireUsage `json:"usage"`
 	} `json:"message"`
 	ContentBlock *struct {
-		Type string `json:"type"`
-		ID   string `json:"id"`
-		Name string `json:"name"`
+		Type      string          `json:"type"`
+		ID        string          `json:"id"`
+		Name      string          `json:"name"`
+		ToolUseID string          `json:"tool_use_id"` // web_search_tool_result
+		Content   json.RawMessage `json:"content"`     // web_search_tool_result: array of result objects
 	} `json:"content_block"`
 	Delta *struct {
-		Type        string `json:"type"`         // text_delta | thinking_delta | signature_delta | input_json_delta
-		Text        string `json:"text"`         // text_delta
-		Thinking    string `json:"thinking"`     // thinking_delta
-		Signature   string `json:"signature"`    // signature_delta
-		PartialJSON string `json:"partial_json"` // input_json_delta
-		StopReason  string `json:"stop_reason"`  // message_delta
+		Type             string          `json:"type"`         // text_delta | thinking_delta | signature_delta | input_json_delta | web_search_tool_result_delta
+		Text             string          `json:"text"`         // text_delta
+		Thinking         string          `json:"thinking"`     // thinking_delta
+		Signature        string          `json:"signature"`    // signature_delta
+		PartialJSON      string          `json:"partial_json"` // input_json_delta
+		StopReason       string          `json:"stop_reason"`  // message_delta
+		WebSearchResults json.RawMessage `json:"results"`      // web_search_tool_result_delta
 	} `json:"delta"`
 	Usage *wireUsage `json:"usage"` // message_delta (cumulative output_tokens)
 	Error *struct {

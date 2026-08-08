@@ -180,7 +180,7 @@ function multiEditAppliedSummary(output: string): string {
   return `${countOf(edits, "tool.editOne", "tool.editOther")} · ${countOf(replacements, "tool.replacementOne", "tool.replacementOther")}`;
 }
 
-// summarize derives the one-line outcome shown under a finished card (the "※"
+// summarize derives the one-line outcome shown under a finished card (the "⎿"
 // secondary line) — counts from the args for writers, from the output for
 // readers. "" means there's nothing worth a summary line.
 export function summarize(name: string, args: string, output?: string, error?: string): string {

@@ -50,7 +50,7 @@ test("≤440px: community nav budgets for the async account control", async () =
   const css = await source("../styles/community.css");
   const layout = await source("../layouts/Community.astro");
   const block = mediaBlock(css, 440);
-  assert.match(layout, /class="brand-name">Inx/);
+  assert.match(layout, /class="brand-name">Reasonix/);
   assert.match(layout, /id="nav-account"/);
   assert.match(block, /\.nav \.brand-name \{ display: none/);
   assert.match(block, /\.nav-right \{ gap: 8px/);

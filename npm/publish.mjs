@@ -122,7 +122,7 @@ function readLocalPackage(entry, version, candidateSha) {
       `local package identity mismatch: expected ${entry.name}@${version}, got ${pkg.name}@${pkg.version}`,
     );
   }
-  if (pkg.inxCandidateSha !== candidateSha) {
+  if (pkg.reasonixCandidateSha !== candidateSha) {
     throw new Error(
       `${entry.name}@${version} does not record candidate ${candidateSha}`,
     );
@@ -137,7 +137,7 @@ function registryPackage(runner, name, version) {
       `${name}@${version}`,
       "name",
       "version",
-      "inxCandidateSha",
+      "reasonixCandidateSha",
       "gitHead",
       "--json",
     ],
@@ -154,7 +154,7 @@ function verifyRegistryPackage(metadata, name, version, candidateSha) {
     );
   }
 
-  const recordedCandidate = metadata.inxCandidateSha;
+  const recordedCandidate = metadata.reasonixCandidateSha;
   const gitHead = metadata.gitHead;
   if (recordedCandidate && recordedCandidate !== candidateSha) {
     throw new Error(
@@ -276,7 +276,17 @@ function cleanupStagingTag(runner, name, version, stagingTag, log) {
   const current = readDistTag(runner, name, stagingTag);
   if (current !== version) return;
   log(`remove temporary ${name} dist-tag ${stagingTag}`);
-  runner(["dist-tag", "rm", name, stagingTag], { inherit: true });
+  try {
+    // Capture stderr for this best-effort cleanup so an npm E403 can be
+    // distinguished from transport, authentication, and registry failures.
+    runner(["dist-tag", "rm", name, stagingTag]);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    if (!/\bE403\b|\b403 Forbidden\b/.test(detail)) throw error;
+    log(
+      `keep temporary ${name} dist-tag ${stagingTag}: npm refused cleanup with E403`,
+    );
+  }
 }
 
 export function publishPackages({
@@ -285,7 +295,10 @@ export function publishPackages({
   candidateSha,
   runner = defaultRunner,
   sleep = defaultSleep,
-  attempts = 6,
+  // npm's public registry can lag a successful immutable publish by several
+  // minutes. Keep this bounded, but allow enough time for normal replication
+  // before recovery treats the package as missing.
+  attempts = 31,
   log = console.log,
 }) {
   if (!Array.isArray(packages) || packages.length === 0) {

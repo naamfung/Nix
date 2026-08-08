@@ -2,6 +2,7 @@ package openai
 
 import (
 	"net/url"
+	"slices"
 	"strings"
 
 	"inx/internal/provider"
@@ -24,10 +25,8 @@ func matchesVendorHost(baseURL, apex string, canonical ...string) bool {
 		return false
 	}
 	host := strings.ToLower(u.Hostname())
-	for _, c := range canonical {
-		if host == c {
-			return true
-		}
+	if slices.Contains(canonical, host) {
+		return true
 	}
 	return strings.HasSuffix(host, "."+apex)
 }
@@ -36,6 +35,17 @@ func matchesVendorHost(baseURL, apex string, canonical ...string) bool {
 // (api.deepseek.com or any *.deepseek.com subdomain).
 func IsDeepSeek(baseURL string) bool {
 	return matchesVendorHost(baseURL, "deepseek.com", "api.deepseek.com")
+}
+
+// IsOpenAI reports whether baseURL points at OpenAI's official API host. Keep
+// this exact-host so a compatible gateway under another openai.com subdomain
+// cannot accidentally receive the official max_completion_tokens wire shape.
+func IsOpenAI(baseURL string) bool {
+	u, err := url.Parse(baseURL)
+	if err != nil {
+		return false
+	}
+	return strings.EqualFold(u.Hostname(), "api.openai.com")
 }
 
 // deepSeekPrefixChatURL returns the official Beta chat endpoint that enables
@@ -124,6 +134,17 @@ func IsMiMo(baseURL string) bool {
 func IsZhipu(baseURL string) bool {
 	return matchesVendorHost(baseURL, "bigmodel.cn", "open.bigmodel.cn") ||
 		matchesVendorHost(baseURL, "z.ai", "api.z.ai")
+}
+
+// IsTokenRhythm reports whether baseURL points at Token Rhythm's official
+// OpenAI-compatible gateway. Keep this exact-host: model-aware protocol
+// upgrades must not affect unrelated subdomains or similarly named relays.
+func IsTokenRhythm(baseURL string) bool {
+	u, err := url.Parse(baseURL)
+	if err != nil {
+		return false
+	}
+	return strings.EqualFold(u.Hostname(), "tokenrhythm.studio")
 }
 
 // IsLongCat reports whether baseURL points at LongCat's OpenAI-compatible API.

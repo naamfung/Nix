@@ -13,6 +13,12 @@ Git tags on one `main-v2` commit and one protected orchestrator.
 The three tags are implementation identities, not user-selectable channels.
 They must always resolve to the same commit and may never be moved or deleted.
 
+The Go SDK module (`sdk/go`) is versioned independently of the three product
+surfaces: its tags look like `sdk/go/vX.Y.Z` (first: `sdk/go/v1.0.0`) and
+point at the release commit that first shipped the corresponding Extension
+Protocol major. SDK tags do not trigger product releases, do not move, and
+do not change the three-tag contract above.
+
 ## Daily release flow
 
 The normal developer path has one version input, one reviewed Notes PR, one
@@ -35,7 +41,7 @@ If repository policy prevents Actions from opening the Notes PR, the workflow
 still pushes `release-notes/vX.Y.Z` and prints this recoverable handoff:
 
 ```sh
-gh pr create --repo naamfung/inx \
+gh pr create --repo esengine/DeepSeek-Inx \
   --base main-v2 --head release-notes/vX.Y.Z --fill
 ```
 

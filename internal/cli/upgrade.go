@@ -29,8 +29,8 @@ import (
 )
 
 const (
-	ghOwner                = "naamfung"
-	ghRepo                 = "inx"
+	ghOwner                = "esengine"
+	ghRepo                 = "DeepSeek-Inx"
 	ghAPIReleases          = "https://api.github.com/repos/" + ghOwner + "/" + ghRepo + "/releases?per_page=100"
 	ghDownloadBase         = "https://github.com/" + ghOwner + "/" + ghRepo + "/releases/download"
 	cliGatewayBase         = "https://crash.inx.io/v1/cli/releases"
@@ -81,10 +81,12 @@ func parseCLIReleaseChannel(value string) (cliReleaseChannel, error) {
 }
 
 type cliUpgradeSyntax struct {
-	checkOnly   bool
-	force       bool
-	positional  *cliReleaseChannel
-	flagChannel *cliReleaseChannel
+	checkOnly     bool
+	force         bool
+	positional    *cliReleaseChannel
+	flagChannel   *cliReleaseChannel
+	helpRequested bool
+	helpText      string
 }
 
 // parseCLIUpgradeSyntax accepts the ergonomic positional channel while keeping
@@ -93,11 +95,15 @@ type cliUpgradeSyntax struct {
 func parseCLIUpgradeSyntax(args []string) (cliUpgradeSyntax, error) {
 	fs := pflag.NewFlagSet("upgrade", pflag.ContinueOnError)
 	fs.SetInterspersed(true)
-	fs.SetOutput(io.Discard)
+	var parseOutput bytes.Buffer
+	fs.SetOutput(&parseOutput)
 	checkOnly := fs.Bool("check", false, "check for updates without installing")
 	force := fs.Bool("force", false, "reinstall even if already on the latest version")
 	channelValue := fs.String("channel", "", "deprecated compatibility option; updates use the official release")
 	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, pflag.ErrHelp) {
+			return cliUpgradeSyntax{helpRequested: true, helpText: parseOutput.String()}, nil
+		}
 		return cliUpgradeSyntax{}, err
 	}
 
@@ -176,6 +182,10 @@ func upgradeCommand(args []string, version string) int {
 	if err != nil {
 		fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, err)
 		return 2
+	}
+	if syntax.helpRequested {
+		fmt.Fprint(os.Stdout, syntax.helpText)
+		return 0
 	}
 
 	// 1. Normalize running version.
@@ -483,6 +493,33 @@ func pickCLIRelease(rels []ghRelease, channel cliReleaseChannel) *ghRelease {
 	return &rels[best]
 }
 
+// githubAPIToken returns the token to authenticate release lookups with.
+// Anonymous GitHub API requests share a 60/hour quota per IP, which a NAT or
+// office network exhausts long before one user's upgrades do (#4449).
+func githubAPIToken() string {
+	for _, name := range []string{"GITHUB_TOKEN", "GH_TOKEN"} {
+		if v := strings.TrimSpace(os.Getenv(name)); v != "" {
+			return v
+		}
+	}
+	return ""
+}
+
+// githubRateLimitHint names the fix when a refusal is the anonymous quota
+// rather than a broken request.
+func githubRateLimitHint(resp *http.Response) string {
+	if resp.StatusCode != http.StatusForbidden && resp.StatusCode != http.StatusTooManyRequests {
+		return ""
+	}
+	if resp.Header.Get("X-RateLimit-Remaining") != "0" {
+		return ""
+	}
+	if githubAPIToken() != "" {
+		return " (rate limited; retry after the window resets)"
+	}
+	return " (rate limited; set GITHUB_TOKEN to raise the quota)"
+}
+
 // fetchLatestRelease queries the GitHub Releases API and returns the newest
 // strict CLI release in the selected public channel.
 func fetchLatestRelease(c *http.Client, channel cliReleaseChannel) (*ghRelease, error) {
@@ -492,12 +529,15 @@ func fetchLatestRelease(c *http.Client, channel cliReleaseChannel) (*ghRelease, 
 		return pointerRelease, nil
 	}
 
-	req, err := http.NewRequest("GET", ghAPIReleases, nil)
+	req, err := http.NewRequest(http.MethodGet, ghAPIReleases, nil)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Accept", "application/vnd.github+json")
 	req.Header.Set("User-Agent", "inx-cli")
+	if token := githubAPIToken(); token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
 
 	resp, err := c.Do(req)
 	if err != nil {
@@ -505,7 +545,7 @@ func fetchLatestRelease(c *http.Client, channel cliReleaseChannel) (*ghRelease, 
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("release gateway: %v; GitHub API: %s", pointerErr, resp.Status)
+		return nil, fmt.Errorf("release gateway: %w; GitHub API: %s%s", pointerErr, resp.Status, githubRateLimitHint(resp))
 	}
 
 	var rels []ghRelease
@@ -516,11 +556,11 @@ func fetchLatestRelease(c *http.Client, channel cliReleaseChannel) (*ghRelease, 
 	if rel := pickCLIRelease(rels, channel); rel != nil {
 		return rel, nil
 	}
-	return nil, fmt.Errorf("release gateway: %v; no %s CLI release found in recent GitHub releases", pointerErr, channel)
+	return nil, fmt.Errorf("release gateway: %w; no %s CLI release found in recent GitHub releases", pointerErr, channel)
 }
 
 func fetchCLIReleasePointer(c *http.Client, pointerURL string, channel cliReleaseChannel) (*ghRelease, error) {
-	req, err := http.NewRequest("GET", pointerURL, nil)
+	req, err := http.NewRequest(http.MethodGet, pointerURL, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -577,7 +617,7 @@ func verifyChecksum(data []byte, fileName string, checksumFile []byte) error {
 	sum := sha256.Sum256(data)
 	got := hex.EncodeToString(sum[:])
 
-	for _, line := range strings.Split(strings.TrimSpace(string(checksumFile)), "\n") {
+	for line := range strings.SplitSeq(strings.TrimSpace(string(checksumFile)), "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" {
 			continue
@@ -706,7 +746,7 @@ func commitWindows(target, newPath, base, dir string) error {
 	if err := os.Rename(newPath, target); err != nil {
 		// Rollback: try to restore the old binary.
 		if rerr := os.Rename(oldPath, target); rerr != nil {
-			return fmt.Errorf("replace failed (%v); rollback also failed: %w", err, rerr)
+			return fmt.Errorf("replace failed (%w); rollback also failed: %w", err, rerr)
 		}
 		return fmt.Errorf("rename new binary: %w", err)
 	}

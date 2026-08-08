@@ -13,28 +13,35 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"math"
 	"net"
 	"net/url"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
 	"unicode/utf16"
 
+	"inx/internal/ablation"
 	"inx/internal/agent"
 	"inx/internal/boot"
 	"inx/internal/config"
 	"inx/internal/control"
 	"inx/internal/event"
+	"inx/internal/extension/providerext"
 	fileencoding "inx/internal/fileutil/encoding"
 	"inx/internal/i18n"
 	"inx/internal/notify"
 	"inx/internal/provider"
 	"inx/internal/provider/openai"
 	"inx/internal/serve"
+	"inx/internal/sessiontemp"
+	"inx/internal/stats"
 	"inx/internal/telemetry"
 
 	tea "charm.land/bubbletea/v2"
@@ -48,7 +55,23 @@ var (
 )
 
 // Run is the CLI entry point; it returns a process exit code.
+// Prefer RunWithBuildInfo when git commit / build time are available from ldflags.
 func Run(args []string, version string) int {
+	return RunWithBuildInfo(args, BuildInfo{Version: version})
+}
+
+// RunWithBuildInfo is the full CLI entry with optional build metadata for
+// `inx version --verbose` / `--json`.
+func RunWithBuildInfo(args []string, info BuildInfo) int {
+	info = info.withDefaults()
+	version := info.Version
+	// Usage recording is asynchronous so provider/UI paths never wait on disk.
+	// Drain records accepted by this process before a normal CLI exit.
+	defer func() {
+		flushCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		_ = stats.Flush(flushCtx, config.StatsDir())
+	}()
 	// Pick the UI language up front so even pre-config paths (the first-run
 	// welcome banner) come through localized. Env-only first; if a config
 	// exists and pins a language, that wins.
@@ -153,38 +176,19 @@ func Run(args []string, version string) int {
 	case "bot":
 		configureCLIThemeFromConfig()
 		return botCommand(rest, version)
-	// =====================================================================
-	// UPGRADE/UPDATE COMMAND DISABLED FOR LOCAL FORK
-	// To re-enable the upgrade/update commands in the future:
-	// 1. Restore the `upgrade` and `update` command routing in this switch block:
-	//    - Uncomment the original:
-	//        case "upgrade", "update":
-	//            configureCLIThemeFromConfig()
-	//            return upgradeCommand(rest, version)
-	//    - Delete the error output code:
-	//        case "upgrade", "update":
-	//            fmt.Fprintln(os.Stderr, "error: upgrade/update command has been disabled in this local forked build.")
-	//            return 2
-	// 2. Restore `upgrade` and `update` in the `shouldMigrateLegacyConfigForCLI` function:
-	//    Change:
-	//        case "", "run", "chat", "code", "serve", "setup", "config", "init", "acp", "mcp", "remote", "plugin", "subagent", "doctor", "bot":
-	//    Back to:
-	//        case "", "run", "chat", "code", "serve", "setup", "config", "init", "acp", "mcp", "remote", "plugin", "subagent", "doctor", "bot", "upgrade", "update":
-	// 3. Update the GitHub repository URLs in `internal/cli/upgrade.go` (lines 32-36) to your upstream address:
-	//    ghOwner = "your-org"
-	//    ghRepo  = "your-repo"
-	//    ghAPIReleases          = "https://api.github.com/repos/" + ghOwner + "/" + ghRepo + "/releases?per_page=100"
-	//    ghDownloadBase         = "https://github.com/" + ghOwner + "/" + ghRepo + "/releases/download"
-	// =====================================================================
-	// case "upgrade", "update":
-	//	configureCLIThemeFromConfig()
-	//	return upgradeCommand(rest, version)
 	case "upgrade", "update":
-		fmt.Fprintln(os.Stderr, "error: upgrade/update command has been disabled in this local forked build.")
-		return 2
-	case "version", "--version", "-v":
-		fmt.Println("inx", version)
-		return 0
+		configureCLIThemeFromConfig()
+		return upgradeCommand(rest, version)
+	case "version":
+		// Detailed identity: version --verbose / --json. Top-level --version/-v
+		// stay single-line for script compatibility (Integration D/E).
+		return versionCommand(rest, info, true)
+	case "--version", "-v":
+		return versionCommand(nil, info, false)
+	case "completion":
+		return completionCommand(rest)
+	case "docs-manifest":
+		return docsManifestCommand(rest, version)
 	case "help", "--help", "-h":
 		usage()
 		return 0
@@ -201,7 +205,7 @@ func isDoctorRepairCommand(args []string) bool {
 
 func isDefaultInteractiveFlag(arg string) bool {
 	switch arg {
-	case "--model", "--max-steps", "--continue", "-c", "--resume", "-r", "--copy", "--dangerously-skip-permissions", "--yolo", "--permission-mode", "--effort", "--dir", "--add-dir", "--allowed-tools", "--allowedTools":
+	case "--model", "--max-steps", "--continue", "-c", "--resume", "-r", "--copy", "--dangerously-skip-permissions", "--yolo", "--permission-mode", "--effort", "--dir", "--add-dir", "--allowed-tools", "--allowedTools", "--profile":
 		return true
 	}
 	if name, _, ok := strings.Cut(arg, "="); ok && isDefaultInteractiveFlag(name) {
@@ -212,7 +216,7 @@ func isDefaultInteractiveFlag(arg string) bool {
 
 func shouldMigrateLegacyConfigForCLI(cmd string) bool {
 	switch cmd {
-	case "", "run", "chat", "code", "serve", "setup", "config", "init", "acp", "mcp", "remote", "plugin", "subagent", "doctor", "bot":
+	case "", "run", "chat", "code", "serve", "setup", "config", "init", "acp", "mcp", "remote", "plugin", "subagent", "doctor", "bot", "upgrade", "update":
 		return true
 	default:
 		return false
@@ -276,6 +280,21 @@ type cliBuildOverrides struct {
 	HeadlessApprovalMode string
 	Stderr               io.Writer
 	OnSessionRecovered   func(control.SessionRecoveryInfo) error
+	Ablation             ablation.Set
+	// SessionTemp carries the previous Controller's private temporary directory
+	// manager across model/profile rebuilds so temporary files survive.
+	SessionTemp *sessiontemp.Manager
+}
+
+// sessionTempFromCLIController returns the logical-session private temporary
+// directory manager for a same-session CLI controller rebuild. Nil keeps fresh
+// builds on control.New's normal new-manager path.
+func sessionTempFromCLIController(ctrl control.SessionAPI) *sessiontemp.Manager {
+	prev, ok := ctrl.(*control.Controller)
+	if !ok || prev == nil {
+		return nil
+	}
+	return prev.SessionTemp()
 }
 
 func setupProfileWithOverrides(ctx context.Context, modelName string, maxStepsOverride int, requireKey bool, sink event.Sink, profile string, overrides cliBuildOverrides) (*control.Controller, error) {
@@ -298,8 +317,11 @@ func cliProfileBuildOptions(modelName string, maxStepsOverride int, requireKey b
 		AdditionalDirs:       overrides.AdditionalDirs,
 		HeadlessApprovalMode: overrides.HeadlessApprovalMode,
 		AutoPricingCurrency:  cliAutoPricingCurrency(),
+		StatsSource:          "cli",
 		Stderr:               overrides.Stderr,
 		OnSessionRecovered:   overrides.OnSessionRecovered,
+		Ablation:             overrides.Ablation,
+		SessionTemp:          overrides.SessionTemp,
 	}
 }
 
@@ -461,6 +483,14 @@ func withNotifications(sink event.Sink, cfg *config.Config) event.Sink {
 	return notify.NewSink(sink, newNotificationSender(), cfg.Notifications)
 }
 
+// registerContinueFlag registers --continue with its -c shorthand. The
+// shorthand must go through BoolP (pflag shorthand), not BoolVar: BoolVar
+// registers "c" as a long flag name, which leaves "-c" unparseable
+// ("unknown shorthand flag: 'c' in -c") while accidentally accepting "--c".
+func registerContinueFlag(fs *pflag.FlagSet) *bool {
+	return fs.BoolP("continue", "c", false, "resume the most recent saved session")
+}
+
 func runAgent(args []string, version string) int {
 	fs := pflag.NewFlagSet("run", pflag.ContinueOnError)
 	fs.SetInterspersed(true)
@@ -469,10 +499,11 @@ func runAgent(args []string, version string) int {
 	maxSteps := fs.Int("max-steps", 0, "one-off max tool-call rounds (0 = automatic)")
 	showThinking := fs.Bool("show-thinking", false, "show thinking text instead of the collapsed thinking marker")
 	metricsPath := fs.String("metrics", "", "write a JSON token/cache/cost summary of the run to this path")
+	trajectoryPath := fs.String("trajectory", "", "append a timestamped JSONL trajectory of the run's full event stream (tool calls, reasoning, decisions) to this path")
+	ablateFlag := fs.String("ablate", "", "benchmark arm: comma-separated subsystems to switch off (evidence, planner, subagent, retrieval, compaction; none|all)")
 	dir := fs.String("dir", "", "change to this directory first (project root); config, sandbox and file tools resolve from here")
-	cont := fs.Bool("continue", false, "resume the most recent saved session")
-	fs.BoolVar(cont, "c", false, "shorthand for --continue")
-	resume := fs.String("resume", "", "resume a specific session file (non-interactive; takes precedence over --continue)")
+	cont := registerContinueFlag(fs)
+	resume := fs.String("resume", "", "resume by session file path, session ID, or machine session ID (takes precedence over --continue)")
 	copySession := fs.Bool("copy", false, "with --resume/--continue: duplicate the session and continue in the copy (escape hatch when the original is held by another Inx process)")
 	effort := fs.String("effort", "", "session reasoning effort override")
 	permissionMode := fs.String("permission-mode", "ask", "permission mode: manual | ask | auto | acceptEdits | dontAsk | plan | bypassPermissions")
@@ -485,8 +516,8 @@ func runAgent(args []string, version string) int {
 	var allowedToolValues []string
 	fs.StringArrayVar(&allowedToolValues, "allowed-tools", nil, "comma or space-separated permission rules to allow")
 	fs.StringArrayVar(&allowedToolValues, "allowedTools", nil, "alias for --allowed-tools")
-	if err := fs.Parse(args); err != nil {
-		return 2
+	if code, ok := parseCommandFlags(fs, args); !ok {
+		return code
 	}
 	resolvedPermissionMode, err := resolveRunPermissionMode(*permissionMode, *autoApprove, fs.Changed("permission-mode"))
 	if err != nil {
@@ -512,6 +543,11 @@ func runAgent(args []string, version string) int {
 		format = runOutputEventsJSONL
 	}
 	profile, err := parseRuntimeProfile(*profileFlag)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, err)
+		return 2
+	}
+	ablated, err := ablation.Parse(*ablateFlag)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, err)
 		return 2
@@ -556,15 +592,26 @@ func runAgent(args []string, version string) int {
 
 	// Resolve the resume target up front so --copy and the session lease can be
 	// handled before any heavy assembly. --resume takes precedence over
-	// --continue, matching the Resume call below.
+	// --continue, matching the Resume call below. Accept file paths, branch
+	// IDs, preview text, and opaque machine session IDs (#7429).
 	resumePath := strings.TrimSpace(*resume)
+	if resumePath != "" {
+		resolved, err := resolveSessionQuery(resolveCLISessionDir(), resumePath)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, err)
+			return 1
+		}
+		resumePath = resolved
+	}
 	if resumePath == "" && *cont {
-		sessions, err := agent.ListSessions(resolveCLISessionDir())
-		if err != nil || len(sessions) == 0 {
+		sessionDir := resolveCLISessionDir()
+		reclaimCLIRecoveryBranches(sessionDir)
+		session, ok := mostRecentSession(sessionDir)
+		if !ok {
 			fmt.Fprintln(os.Stderr, i18n.M.NoSessionToResume)
 			return 1
 		}
-		resumePath = sessions[0].Path
+		resumePath = session.Path
 	}
 	if *copySession && resumePath == "" {
 		fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, "--copy requires --resume or --continue")
@@ -619,34 +666,12 @@ func runAgent(args []string, version string) int {
 	defer stop()
 	started := time.Now()
 
-	// Live run: render the agent's event stream to stdout. Markdown post-stream
-	// redraw (cursor moves) is enabled only on a TTY; piped / captured output
-	// keeps the raw stream.
-	var sink event.Sink
-	var resultOutput *runOutputSink
-	if *printOnly || format != runOutputText {
-		resultOutput = newRunOutputSink(os.Stdout, format)
-		sink = resultOutput
-	} else {
-		var renderer agent.Renderer
-		termW := 80
-		if isTTY(os.Stdout) {
-			if w, _, err := term.GetSize(int(os.Stdout.Fd())); err == nil && w > 0 {
-				termW = w
-			}
-			renderer = newMarkdownRenderer(termW)
-		}
-		textSink := agent.NewTextSink(os.Stdout, renderer, termW)
-		textSink.SetShowReasoning(*showThinking)
-		sink = textSink
+	chain, err := buildRunSink(format, *printOnly, *showThinking, *metricsPath, *trajectoryPath, cfg, reporter)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, err)
+		return 1
 	}
-	var metrics *metricsSink
-	if *metricsPath != "" {
-		metrics = &metricsSink{inner: sink}
-		sink = metrics
-	}
-	sink = withNotifications(sink, cfg)
-	sink = reporter.Wrap(sink)
+	sink, resultOutput, metrics := chain.sink, chain.resultOutput, chain.metrics
 	if resumePath != "" {
 		*model = modelForResumePath(*model, resumePath, cfg)
 	}
@@ -671,6 +696,7 @@ func runAgent(args []string, version string) int {
 		WorkspaceRoot:        workspaceRoot,
 		HeadlessApprovalMode: permissions.approval,
 		OnSessionRecovered:   cliSessionRecoveredHandler(leases),
+		Ablation:             ablated,
 	}
 	ctrl, err := setupProfileWithOverrides(ctx, *model, *maxSteps, true, sink, profile, overrides)
 	if err != nil {
@@ -684,6 +710,7 @@ func runAgent(args []string, version string) int {
 		return 1
 	}
 	defer ctrl.Close()
+	SetTaskJobKiller(ctrlKillerAdapter{ctrl})
 	ctrl.ApplyHeadlessApprovalMode(permissions.approval)
 
 	// --resume: load a specific session file (non-interactive, meant for
@@ -702,6 +729,7 @@ func runAgent(args []string, version string) int {
 		fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, control.SessionInUseMessage(err)+"; "+control.SessionLeaseCloseHint)
 		return 1
 	}
+	reclaimCLIRecoveryBranches(ctrl.SessionDir())
 
 	runErr := ctrl.Run(ctx, prompt)
 	reporter.RecordRecovery(ctrl.DrainRecoveryMetrics())
@@ -714,10 +742,16 @@ func runAgent(args []string, version string) int {
 		})
 	}
 	if metrics != nil {
+		// Snapshot under the sink's lock: a background job can still be emitting
+		// into it while this goroutine assembles the final record.
+		final := metrics.Snapshot()
+		final.DurationMs = time.Since(started).Milliseconds()
+		final.Outcome = completion.class
+		final.Arm = ablated.Arm()
 		if exec := ctrl.Executor(); exec != nil {
 			if audit := exec.CapabilityAudit(); audit != nil {
 				snap := audit.Snapshot()
-				metrics.m.MergeCapabilityAuditCounters(
+				final.MergeCapabilityAuditCounters(
 					snap.Routes, snap.RoutedCandidates, snap.RoutedRequire, snap.RoutedPrefer, snap.RoutedSuggest, snap.Declines,
 					snap.SemanticRoutes, snap.SemanticFallbacks,
 					snap.RequireMissing, snap.RequireRecovered, snap.PreferMissing, snap.PreferRecovered,
@@ -729,7 +763,12 @@ func runAgent(args []string, version string) int {
 				)
 			}
 		}
-		if err := writeMetrics(*metricsPath, metrics.m); err != nil {
+		if err := writeMetrics(*metricsPath, final); err != nil {
+			fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, err)
+		}
+	}
+	if chain.trajectory != nil {
+		if err := chain.trajectory.Close(); err != nil {
 			fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, err)
 		}
 	}
@@ -774,8 +813,8 @@ func runServe(args []string) int {
 	portFile := fs.String("port-file", "", "write the actual bound listen address (host:port) to this file after binding")
 	tokenFile := fs.String("token-file", "", "read the auth=token pre-shared token from this file (overrides --token; keeps the secret out of argv)")
 	pidFile := fs.String("pid-file", "", "write the server process id to this file")
-	if err := fs.Parse(args); err != nil {
-		return 2
+	if code, ok := parseCommandFlags(fs, args); !ok {
+		return code
 	}
 	profile, err := parseRuntimeProfile(*profileFlag)
 	if err != nil {
@@ -869,7 +908,10 @@ func runServe(args []string) int {
 	// ignoring project-level default_model overrides. Explicit flags and
 	// resumable session models remain strict and are preserved verbatim.
 	*model = resolveServeModel(*model)
-	ctrl, err := setupProfileWithOverrides(ctx, *model, *maxSteps, true, bc, profile, cliBuildOverrides{
+	// Keep the browser reachable when the selected provider has no saved key.
+	// The loopback-only provider setup surface stores the missing credential and
+	// rebuilds this controller in place before the normal web UI is exposed.
+	ctrl, err := setupProfileWithOverrides(ctx, *model, *maxSteps, false, bc, profile, cliBuildOverrides{
 		OnSessionRecovered: cliSessionRecoveredHandler(leases),
 	})
 	if err != nil {
@@ -877,6 +919,7 @@ func runServe(args []string) int {
 		return 1
 	}
 	defer ctrl.Close()
+	SetTaskJobKiller(ctrlKillerAdapter{ctrl})
 
 	// Auto-save target: reuse the resumed file, else a fresh one — same as chat.
 	if *resume != "" {
@@ -923,6 +966,7 @@ func runServe(args []string) int {
 		}
 		defer os.Remove(*pidFile)
 	}
+	srv.EnableProviderSetupForListener(displayAddr)
 
 	fmt.Printf("inx serve — %s on http://%s\n", ctrl.Label(), displayAddr)
 	if srv.AuthMode() == "token" {
@@ -943,14 +987,18 @@ func runServe(args []string) int {
 	if warning := serve.PlainHTTPAuthWarning(serveCfg, displayAddr); warning != "" {
 		fmt.Fprintf(os.Stderr, "  %s\n", warning)
 	}
-	// Diagnostic: check whether balance endpoint is reachable
-	if b, err := ctrl.Balance(context.Background()); err != nil {
-		fmt.Fprintf(os.Stderr, "  balance: error — %v\n", err)
-	} else if b == nil {
-		fmt.Fprintf(os.Stderr, "  balance: not configured (no balance_url for this provider)\n")
-	} else {
-		fmt.Printf("  balance: %s\n", b.Display())
-	}
+	// Balance is diagnostics, not readiness. Run it off the serving path so a
+	// slow or unauthenticated Provider endpoint cannot leave a published port
+	// file pointing at a listener whose HTTP accept loop has not started yet.
+	go func() {
+		if b, err := ctrl.Balance(context.Background()); err != nil {
+			fmt.Fprintf(os.Stderr, "  balance: error — %v\n", err)
+		} else if b == nil {
+			fmt.Fprintf(os.Stderr, "  balance: not configured (no balance_url for this provider)\n")
+		} else {
+			fmt.Printf("  balance: %s\n", b.Display())
+		}
+	}()
 
 	// Use graceful shutdown so SIGINT/SIGTERM drain active connections.
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -978,8 +1026,7 @@ func chatREPL(args []string, version string) int {
 	model := fs.String("model", "", "provider name (default: config default_model)")
 	profileFlag := fs.String("profile", "balanced", "runtime profile: economy | balanced | delivery")
 	maxSteps := fs.Int("max-steps", 0, "one-off max tool-call rounds (0 = automatic)")
-	cont := fs.Bool("continue", false, "resume the most recent saved session")
-	fs.BoolVar(cont, "c", false, "shorthand for --continue")
+	cont := registerContinueFlag(fs)
 	resume := fs.StringP("resume", "r", "", "resume by session ID/query, or open the picker when no value is given")
 	fs.Lookup("resume").NoOptDefVal = resumePickerSentinel
 	copySession := fs.Bool("copy", false, "with --resume/--continue: duplicate the selected session and continue in the copy (escape hatch when the original is held by another Inx process)")
@@ -993,8 +1040,8 @@ func chatREPL(args []string, version string) int {
 	var allowedToolValues []string
 	fs.StringArrayVar(&allowedToolValues, "allowed-tools", nil, "comma or space-separated permission rules to allow")
 	fs.StringArrayVar(&allowedToolValues, "allowedTools", nil, "alias for --allowed-tools")
-	if err := fs.Parse(normalizeOptionalResumeArg(args)); err != nil {
-		return 2
+	if code, ok := parseCommandFlags(fs, normalizeOptionalResumeArg(args)); !ok {
+		return code
 	}
 	allowedTools, err := splitAllowedToolRules(allowedToolValues)
 	if err != nil {
@@ -1020,16 +1067,18 @@ func chatREPL(args []string, version string) int {
 		fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, err)
 		return 1
 	}
+	// Bubble Tea owns the terminal from the resume picker through controller
+	// shutdown. Start diagnostics before config/controller work so hangs leave a
+	// non-zero log with milestones (#7435, #7507).
+	diagnostics := startTUIDiagnostics(config.InxHomeDir())
+	defer diagnostics.Close()
+	diagnostics.Milestone("config_load_begin")
 	cfg, err := config.Load()
 	if err == nil {
 		configureCLIThemeWithStyle(cfg.UITheme(), cfg.UIThemeStyle())
 		cliCursorShape = cfg.UICursorShape()
 	}
-	// Bubble Tea owns the terminal from the resume picker through controller
-	// shutdown. Route process logs and plugin stderr to a private, bounded file
-	// for that whole lifetime; user-facing warnings arrive as typed TUI events.
-	diagnostics := startTUIDiagnostics(config.InxHomeDir())
-	defer diagnostics.Close()
+	diagnostics.Milestone("config_load_done")
 
 	// Decide whether we're starting fresh or resuming. --resume opens an
 	// interactive picker; --continue / -c jumps straight into the newest.
@@ -1056,12 +1105,14 @@ func chatREPL(args []string, version string) int {
 		}
 		resumePath = path
 	case *cont:
-		sessions, err := agent.ListSessions(resolveCLISessionDir())
-		if err != nil || len(sessions) == 0 {
+		sessionDir := resolveCLISessionDir()
+		reclaimCLIRecoveryBranches(sessionDir)
+		session, ok := mostRecentSession(sessionDir)
+		if !ok {
 			fmt.Fprintln(os.Stderr, i18n.M.NoSessionToResume)
 			return 1
 		}
-		resumePath = sessions[0].Path
+		resumePath = session.Path
 	}
 	if *copySession && resumePath == "" {
 		fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, "--copy requires --resume or --continue")
@@ -1123,6 +1174,7 @@ func chatREPL(args []string, version string) int {
 		Stderr:             diagnostics.Writer(),
 		OnSessionRecovered: cliSessionRecoveredHandler(leases),
 	}
+	diagnostics.Milestone("controller_build_begin")
 	ctrl, err := setupProfileWithOverrides(ctx, *model, *maxSteps, false, sink, profile, overrides)
 	if err != nil && errors.Is(err, boot.ErrUnknownModel) && isInteractive() && config.SourcePath() == "" {
 		// True first run whose default model can't resolve: guide setup, then retry.
@@ -1138,6 +1190,7 @@ func chatREPL(args []string, version string) int {
 		fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, err)
 		return 1
 	}
+	diagnostics.Milestone("controller_build_done")
 
 	// Decide where this conversation's auto-save lands. A resume reuses the
 	// file so closing/reopening keeps appending to the same history; a fresh
@@ -1157,6 +1210,7 @@ func chatREPL(args []string, version string) int {
 		fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, control.SessionInUseMessage(err)+"; "+control.SessionLeaseCloseHint)
 		return 1
 	}
+	reclaimCLIRecoveryBranches(ctrl.SessionDir())
 
 	// Surface a missing-key warning inside the TUI banner so the first message
 	// failing is at least pre-announced; the user can still enter chat.
@@ -1170,6 +1224,9 @@ func chatREPL(args []string, version string) int {
 		switch {
 		case err != nil:
 			missing = err.Error()
+		case name != "" && providerext.PluginRefOwner(name) != "":
+			// Plugin-namespaced refs hold no config credential; boot's merged
+			// resolver already gated them, and there is no key env to warn about.
 		case name != "":
 			if vErr := cfg.Validate(name); vErr != nil {
 				missing = vErr.Error()
@@ -1196,12 +1253,15 @@ func chatREPL(args []string, version string) int {
 	}
 
 	m := newChatTUI(ctrl, missing, eventCh, termW)
+	m.diagnostics = diagnostics
+	m.updateWatchdogStatusProvider()
 	m.planMode = permissions.plan
 	m.leases = leases
-	if cfg, err := config.Load(); err == nil {
+	if cfg != nil {
 		m.outputStyle = cfg.Agent.OutputStyle    // shown as the active entry in /output-style
 		m.statuslineCmd = cfg.Statusline.Command // custom status-line command, "" = built-in row
 		m.showReasoning = cfg.UI.ShowReasoning   // /verbose persistence: start with config default
+		m.showTurnUsage = cfg.UI.ShowTurnUsage   // retain usage accounting even when transcript receipts are hidden
 		m.cfg = cfg
 	}
 
@@ -1214,6 +1274,9 @@ func chatREPL(args []string, version string) int {
 		if spec.EffortOverride != nil {
 			effectiveOverrides.Effort = spec.EffortOverride
 		}
+		// Keep the logical-session private temporary directory across model /
+		// profile switches (Issue #7575).
+		effectiveOverrides.SessionTemp = sessionTempFromCLIController(oldCtrl)
 		c, err := setupQuietProfile(ctx, spec.ModelRef, *maxSteps, false, sink, spec.RuntimeProfile, effectiveOverrides)
 		if err != nil {
 			return nil, err
@@ -1235,6 +1298,30 @@ func chatREPL(args []string, version string) int {
 		}
 		return c, nil
 	}
+	// /reload support: rebuild the runtime through boot.Rebuild so tools,
+	// skills, commands, hooks, MCP servers, and providers are discovered fresh
+	// while the boot layer migrates the session (history, approval grants,
+	// goal/recovery state, lifecycle). Same construction inputs as
+	// buildController so the replacement matches this session's launch wiring;
+	// the CLI holds no SharedHost, so each rebuild owns its plugin host.
+	m.rebuildRuntime = func(ctx context.Context, spec controllerBuildSpec, old *control.Controller) (*boot.BuildResult, error) {
+		effectiveOverrides := overrides
+		if spec.EffortOverride != nil {
+			effectiveOverrides.Effort = spec.EffortOverride
+		}
+		res, err := boot.Rebuild(ctx, old, cliProfileBuildOptions(spec.ModelRef, *maxSteps, false, sink, spec.RuntimeProfile, effectiveOverrides))
+		if err != nil {
+			return nil, err
+		}
+		// The interactive approval gate and the --yolo posture are frontend
+		// wiring boot.Rebuild deliberately leaves to the caller (it carries
+		// the Ask/Auto/Yolo tool-approval mode, not the launch flag).
+		res.Controller.EnableInteractiveApproval()
+		if *yolo {
+			res.Controller.SetAutoApproveTools(true)
+		}
+		return res, nil
+	}
 	m.runtimeProfile = profile
 	if effortOverride != nil {
 		m.effortLevel = *effortOverride
@@ -1250,7 +1337,9 @@ func chatREPL(args []string, version string) int {
 	// Non-Termux terminals use an alt-screen transcript viewport. Termux stays
 	// in the normal buffer so native touch scrollback and soft-keyboard focus
 	// keep working; finalized transcript lines are emitted via tea.Println.
+	diagnostics.Milestone("terminal_takeover_begin")
 	p := tea.NewProgram(m)
+	diagnostics.StartWatchdog(p)
 	// SSH drop (SIGHUP) or service stop (SIGTERM): persist the conversation
 	// before the terminal goes away, then unwind through the normal close path
 	// so resume picks up the interrupted session (#3772).
@@ -1263,6 +1352,7 @@ func chatREPL(args []string, version string) int {
 	}()
 	final, runErr := p.Run()
 	signal.Stop(hangup)
+	diagnostics.Milestone("terminal_released")
 	// Close the active controller plus any retired ones from /model switches.
 	// Retired controllers were stashed rather than closed at switch time
 	// because Controller.Close() runs SessionEnd hooks and kills plugin
@@ -1337,7 +1427,7 @@ func prepareNativeScrollback(w io.Writer, rows int) {
 }
 
 func reserveNativeScrollbackFrame(w io.Writer, rows int) {
-	for i := 0; i < rows; i++ {
+	for range rows {
 		fmt.Fprintln(w)
 	}
 }
@@ -1498,8 +1588,10 @@ func interactiveSetup(configPath, envPath string) int {
 // message so the user can pick one. Returns the chosen path and a process
 // exit code (non-zero when there's nothing to pick or the user cancelled).
 func pickSessionToResume() (string, int) {
-	sessions, err := agent.ListSessions(resolveCLISessionDir())
-	if err != nil || len(sessions) == 0 {
+	sessionDir := resolveCLISessionDir()
+	reclaimCLIRecoveryBranches(sessionDir)
+	sessions := recentSessions(sessionDir)
+	if len(sessions) == 0 {
 		fmt.Fprintln(os.Stderr, i18n.M.NoSessionToResume)
 		return "", 1
 	}
@@ -1507,20 +1599,12 @@ func pickSessionToResume() (string, int) {
 		fmt.Fprintln(os.Stderr, i18n.M.ResumeRequiresTTY)
 		return "", 1
 	}
-	const cap = 10
-	if len(sessions) > cap {
-		sessions = sessions[:cap]
-	}
 	items := make([]menuItem, len(sessions))
 	for i, s := range sessions {
 		when := s.ModTime.Local().Format("01-02 15:04")
-		preview := s.Preview
-		if preview == "" {
-			preview = "(no user message yet)"
-		}
 		items[i] = menuItem{
 			name: when,
-			desc: fmt.Sprintf("%d turns · %s", s.Turns, preview),
+			desc: sessionSummary(s),
 		}
 	}
 	idx, err := selectOne(i18n.M.PickSessionLabel, items)
@@ -1680,12 +1764,7 @@ func buildFamilyEntry(probe config.ProviderEntry, selected []string) config.Prov
 }
 
 func containsString(xs []string, v string) bool {
-	for _, x := range xs {
-		if x == v {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(xs, v)
 }
 
 // filterStaleCustomEntries drops the wizard's own magic-name entries
@@ -2214,7 +2293,7 @@ func appendEnv(path string, lines []string) error {
 
 	var kept []string
 	if data, err := fileencoding.ReadFileUTF8(path); err == nil {
-		for _, raw := range strings.Split(string(data), "\n") {
+		for raw := range strings.SplitSeq(string(data), "\n") {
 			trimmed := strings.TrimSpace(raw)
 			check := strings.TrimPrefix(trimmed, "export ")
 			if k, _, ok := strings.Cut(check, "="); ok && target[strings.TrimSpace(k)] {
@@ -2265,6 +2344,15 @@ func usage() {
 	fmt.Print(i18n.M.UsageBody)
 }
 
+type ctrlKillerAdapter struct{ ctrl *control.Controller }
+
+func (a ctrlKillerAdapter) Kill(sessionID, id string) bool {
+	if sessionID != "" && agent.BranchID(a.ctrl.SessionPath()) != sessionID {
+		return false
+	}
+	return a.ctrl.CancelJob(id)
+}
+
 func configCommand(args []string) int {
 	if len(args) == 0 {
 		configUsage()
@@ -2275,6 +2363,8 @@ func configCommand(args []string) int {
 		return configAutoPlanCompatibilityCommand(args[1:])
 	case "reasoning-language":
 		return configReasoningLanguageCommand(args[1:])
+	case "compact-ratio":
+		return configCompactRatioCommand(args[1:])
 	case "currency":
 		return configCurrencyCommand(args[1:])
 	case "telemetry":
@@ -2288,8 +2378,8 @@ func configCommand(args []string) int {
 func configCurrencyCommand(args []string) int {
 	fs := flag.NewFlagSet("config currency", flag.ContinueOnError)
 	local := fs.Bool("local", false, "unsupported; pricing currency is user-level only")
-	if err := fs.Parse(args); err != nil {
-		return 2
+	if code, ok := parseCommandFlags(fs, args); !ok {
+		return code
 	}
 	if *local {
 		fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, "currency is user-level only; --local is not supported")
@@ -2340,14 +2430,30 @@ func configCurrencyCommand(args []string) int {
 }
 
 var (
-	cleanupCLITelemetry       = telemetry.Cleanup
-	startCLITelemetryReporter = telemetry.Start
+	cleanupCLITelemetry        = telemetry.Cleanup
+	startCLITelemetryReporter  = telemetry.Start
+	persistCLITelemetryConsent = func(mode string) error {
+		path := config.UserConfigPath()
+		if strings.TrimSpace(path) == "" {
+			return errors.New("cannot resolve config path")
+		}
+		unlock := config.LockUserConfigEdits()
+		defer unlock()
+		cfg, err := config.LoadForEditReadOnlyStrict(path)
+		if err != nil {
+			return err
+		}
+		if err := cfg.SetCLITelemetryMode(mode); err != nil {
+			return err
+		}
+		return cfg.SaveTo(path)
+	}
 )
 
 func configTelemetryCommand(args []string) int {
 	fs := flag.NewFlagSet("config telemetry", flag.ContinueOnError)
-	if err := fs.Parse(args); err != nil {
-		return 2
+	if code, ok := parseCommandFlags(fs, args); !ok {
+		return code
 	}
 	rest := fs.Args()
 	if len(rest) > 1 {
@@ -2395,8 +2501,8 @@ func configTelemetryCommand(args []string) int {
 func configAutoPlanCompatibilityCommand(args []string) int {
 	fs := flag.NewFlagSet("config auto-plan", flag.ContinueOnError)
 	local := fs.Bool("local", false, "unsupported; automatic plan mode is retired")
-	if err := fs.Parse(args); err != nil {
-		return 2
+	if code, ok := parseCommandFlags(fs, args); !ok {
+		return code
 	}
 	if *local {
 		fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, "auto-plan is user-level only; --local is not supported")
@@ -2423,8 +2529,8 @@ func configAutoPlanCompatibilityCommand(args []string) int {
 func configReasoningLanguageCommand(args []string) int {
 	fs := flag.NewFlagSet("config reasoning-language", flag.ContinueOnError)
 	local := fs.Bool("local", false, "write ./inx.toml instead of the user config")
-	if err := fs.Parse(args); err != nil {
-		return 2
+	if code, ok := parseCommandFlags(fs, args); !ok {
+		return code
 	}
 	rest := fs.Args()
 	if len(rest) > 1 {
@@ -2490,9 +2596,98 @@ func configReasoningLanguageCommand(args []string) int {
 	return 0
 }
 
+func configCompactRatioCommand(args []string) int {
+	fs := flag.NewFlagSet("config compact-ratio", flag.ContinueOnError)
+	local := fs.Bool("local", false, "write ./inx.toml instead of the user config")
+	if err := fs.Parse(args); err != nil {
+		return 2
+	}
+	rest := fs.Args()
+	if len(rest) > 1 {
+		configCompactRatioUsage()
+		return 2
+	}
+	if len(rest) == 0 {
+		cfg, err := config.LoadForRootReadOnly(".")
+		if err != nil {
+			fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, err)
+			return 1
+		}
+		fmt.Printf("compact_ratio = %s (%s)\n", formatCompactRatioPercent(cfg.Agent.CompactRatio), compactRatioSource())
+		return 0
+	}
+	percent, err := strconv.ParseFloat(strings.TrimSpace(rest[0]), 64)
+	if err != nil || math.IsNaN(percent) || math.IsInf(percent, 0) || percent < 65 || percent > 85 {
+		fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, "compact ratio must be a percentage between 65 and 85")
+		return 2
+	}
+	ratio := percent / 100
+	path := config.UserConfigPath()
+	scope := "user"
+	if *local {
+		path = "inx.toml"
+		scope = "project"
+	}
+	if path == "" {
+		fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, "cannot resolve config path")
+		return 1
+	}
+	unlock, err := config.LockConfigFileEdits(path)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, err)
+		return 1
+	}
+	defer unlock()
+	if *local {
+		if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
+			saved, err := config.SaveMinimalProjectCompactRatio(path, ratio)
+			if err != nil {
+				fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, err)
+				return 1
+			}
+			fmt.Printf("compact_ratio = %s (%s: %s)\n", formatCompactRatioPercent(saved), scope, displayPath(path))
+			return 0
+		} else if err != nil {
+			fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, err)
+			return 1
+		}
+	}
+	cfg, err := config.LoadForEditReadOnlyStrict(path)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, err)
+		return 1
+	}
+	if err := cfg.SetCompactRatio(ratio); err != nil {
+		fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, err)
+		return 2
+	}
+	if err := cfg.SaveTo(path); err != nil {
+		fmt.Fprintln(os.Stderr, i18n.M.ErrorPrefix, err)
+		return 1
+	}
+	fmt.Printf("compact_ratio = %s (%s: %s)\n", formatCompactRatioPercent(cfg.Agent.CompactRatio), scope, displayPath(path))
+	return 0
+}
+
+func compactRatioSource() string {
+	if config.ConfigFileDefinesCompactRatio("inx.toml") {
+		return "project: " + displayPath("inx.toml")
+	}
+	if path := config.UserConfigPath(); path != "" && config.ConfigFileDefinesCompactRatio(path) {
+		return "user: " + displayPath(path)
+	}
+	return "built-in default"
+}
+
+func formatCompactRatioPercent(ratio float64) string {
+	value := strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", ratio*100), "0"), ".")
+	return value + "%"
+}
+
 func configUsage() {
 	fmt.Print(`Usage:
   inx config reasoning-language [--local] [auto|zh|en]
+  inx config compact-ratio [--local] [65..85]
   inx config currency [auto|CNY|USD]
   inx config telemetry [auto|on|off]
 `)
@@ -2504,7 +2699,17 @@ func configTelemetryUsage() {
 `)
 }
 
+func configCompactRatioUsage() {
+	fmt.Print(`Usage:
+  inx config compact-ratio [--local] [65..85]
+`)
+}
+
 func startCLITelemetry(cfg *config.Config, opts telemetry.Options) *telemetry.Reporter {
+	return startCLITelemetryWithIO(cfg, opts, os.Stdin, os.Stdout, os.Stderr)
+}
+
+func startCLITelemetryWithIO(cfg *config.Config, opts telemetry.Options, in io.Reader, out, errOut io.Writer) *telemetry.Reporter {
 	if cfg == nil {
 		cfg = config.Default()
 	}
@@ -2512,9 +2717,38 @@ func startCLITelemetry(cfg *config.Config, opts telemetry.Options) *telemetry.Re
 	opts.HomeDir = config.InxHomeDir()
 	opts.Proxy = cfg.NetworkProxySpec()
 	opts.Language = cfg.Language
-	// No consent prompt: telemetry defaults to off and only runs after the
-	// user explicitly opts in via `inx config telemetry auto|on`. `telemetry.Start`
-	// itself fails closed when the resolved mode is disabled.
+
+	if cfg.CLITelemetryConfigured() || !telemetry.Enabled(opts.Mode, opts.Version, opts.Interactive) {
+		return startCLITelemetryReporter(opts)
+	}
+
+	fmt.Fprintln(out, i18n.M.CLITelemetryConsentNotice)
+	scanner := bufio.NewScanner(in)
+	mode := ""
+	for mode == "" {
+		answer := strings.ToLower(strings.TrimSpace(ask(scanner, out, i18n.M.CLITelemetryConsentPrompt, "Y/n")))
+		switch answer {
+		case "y", "yes", "y/n":
+			mode = "auto"
+		case "n", "no":
+			mode = "off"
+		default:
+			fmt.Fprintln(out, i18n.M.CLITelemetryConsentInvalid)
+		}
+	}
+
+	if err := persistCLITelemetryConsent(mode); err != nil {
+		fmt.Fprintf(errOut, i18n.M.CLITelemetryConsentSaveFailedFmt+"\n", err)
+		return nil
+	}
+	cfg.Telemetry.CLIMetrics = mode
+	opts.Mode = mode
+	if mode == "off" {
+		if err := cleanupCLITelemetry(opts.HomeDir); err != nil {
+			fmt.Fprintf(errOut, i18n.M.CLITelemetryConsentCleanupFailedFmt+"\n", err)
+		}
+		return nil
+	}
 	return startCLITelemetryReporter(opts)
 }
 

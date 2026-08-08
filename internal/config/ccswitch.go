@@ -26,8 +26,8 @@ type ccSwitchLegacyServer struct {
 	Name   string        `json:"name"`
 	Server mcpServerSpec `json:"server"`
 	Apps   struct {
-		Codex bool  `json:"codex"`
-		Inx   *bool `json:"inx"`
+		Codex    bool  `json:"codex"`
+		Inx *bool `json:"inx"`
 	} `json:"apps"`
 }
 

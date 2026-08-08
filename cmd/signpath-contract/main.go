@@ -16,9 +16,9 @@ import (
 
 const (
 	contractPath = ".signpath/contracts/release-signing.yml"
-	projectSlug  = "DeepSeek-Reasonix"
+	projectSlug  = "DeepSeek-Inx"
 	policySlug   = "release-signing"
-	repository   = "https://github.com/esengine/DeepSeek-Reasonix.git"
+	repository   = "https://github.com/esengine/DeepSeek-Inx.git"
 )
 
 var expectedBranches = []string{"main-v2"}

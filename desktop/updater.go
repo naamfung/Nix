@@ -90,7 +90,7 @@ var (
 // own the repo-wide latest badge and publish latest.json directly, while
 // The unified official Release carries the desktop manifest as a final fallback
 // when both first-party endpoints are unavailable.
-const githubManifestFallback = "https://github.com/naamfung/inx/releases/latest/download/latest.json"
+const githubManifestFallback = "https://github.com/esengine/DeepSeek-Inx/releases/latest/download/latest.json"
 
 func normalizeUpdateChannel(ch string) string {
 	return config.NormalizeDesktopUpdateChannel(ch)
@@ -309,8 +309,8 @@ func desktopAssetBases(selected, version string, allowLegacyPreview bool) []stri
 	tag := desktopReleaseTag(selected, version)
 	return []string{
 		fmt.Sprintf("%s/%s/", r2Base, tag),
-		fmt.Sprintf("https://github.com/naamfung/inx/releases/download/%s/", tag),
-		fmt.Sprintf("https://github.com/naamfung/inx/releases/download/%s/", version),
+		fmt.Sprintf("https://github.com/esengine/DeepSeek-Inx/releases/download/%s/", tag),
+		fmt.Sprintf("https://github.com/esengine/DeepSeek-Inx/releases/download/%s/", version),
 	}
 }
 
@@ -1047,7 +1047,7 @@ func extractLinuxReleaseUnit(targz []byte) (map[string][]byte, error) {
 	tr := tar.NewReader(gz)
 	for {
 		h, err := tr.Next()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {
@@ -1250,13 +1250,19 @@ func currentInstallDir() string {
 	return filepath.Dir(exe)
 }
 
-// archiveSupersededLegacyUpdateAfterReady retires a valid older flat-layout
-// transaction only after the newer versioned desktop has shown its UI. This
-// lets a signed recovery installer heal users already blocked by a v1.18-v1.19
-// health marker without deleting repair state or trusting a foreign install.
-func archiveSupersededLegacyUpdateAfterReady() (bool, error) {
+// archiveSupersededPendingUpdateAfterReady retires a transaction only after the
+// current desktop has shown a usable UI. App-bundle recovery handles interrupted
+// macOS generations; the versioned-layout branch handles older flat Windows and
+// Linux transactions.
+func archiveSupersededPendingUpdateAfterReady() (bool, error) {
 	exe := currentExecutablePath()
 	if exe == "" || version == "" || version == "dev" {
+		return false, nil
+	}
+	if archived, err := repair.ArchiveSupersededPendingAppBundleUpdate(version); err != nil || archived {
+		return archived, err
+	}
+	if runtime.GOOS == "darwin" {
 		return false, nil
 	}
 	root, err := installlayout.ResolveInstallRoot(exe)
@@ -1280,6 +1286,26 @@ func archiveSupersededLegacyUpdateAfterReady() (bool, error) {
 		return false, fmt.Errorf("active install version %s does not match running version %s", ptr.ActiveVersion, running)
 	}
 	return repair.ArchiveSupersededPendingFileUpdate(running, root)
+}
+
+func capturePendingUpdateHealthIdentity(app *App) {
+	if app == nil {
+		return
+	}
+	tx, err := readPendingUpdateForHealth()
+	if err != nil || tx == nil || !repair.UpdateVersionsEqual(tx.ToVersion, version) {
+		return
+	}
+	app.healthyUpdateCreatedAt = tx.CreatedAt
+	app.healthyUpdateTransactionID = repair.UpdateTransactionID(tx)
+}
+
+// refreshPendingUpdateHealthIdentity re-reads the current probationary
+// transaction so a user-initiated update can commit health even when the
+// process started without a matching identity (for example a historical
+// version-prefix mismatch).
+func refreshPendingUpdateHealthIdentity(app *App) {
+	capturePendingUpdateHealthIdentity(app)
 }
 
 // updateSiblingArtifacts lists the packaged binaries an update replaces beside

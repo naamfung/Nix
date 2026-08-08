@@ -28,7 +28,7 @@ type Rect = w32.Rect
 // minimise/restore cycle on mixed-DPI displays (Inx #5862, Wails #5544).
 const (
 	shouldDetectMonitorScaleChanges = true
-	inxNoProxyServerBrowserArg      = "--no-proxy-server"
+	inxNoProxyServerBrowserArg = "--no-proxy-server"
 )
 
 func globalErrorHandler(err error) {

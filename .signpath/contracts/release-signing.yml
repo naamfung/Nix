@@ -1,7 +1,7 @@
 version: 1
-project_slug: DeepSeek-Inx
+project_slug: DeepSeek-Reasonix
 signing_policy_slug: release-signing
-repository_url: https://github.com/esengine/DeepSeek-Inx.git
+repository_url: https://github.com/esengine/DeepSeek-Reasonix.git
 allowed_branch_names:
   - main-v2
 allowed_build_definitions:

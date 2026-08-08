@@ -19,7 +19,7 @@ func TestProcessTestEnvironmentContainsAllUserStatePaths(t *testing.T) {
 	home := os.Getenv("HOME")
 	paths := map[string]string{
 		"operating system cache": osUserCacheDir(),
-		"Inx cache":              CacheDir(),
+		"Inx cache":         CacheDir(),
 		"workspace leases":       WorkspaceLeaseDir(),
 		"delivery worktrees":     DeliveryWorktreeDir(),
 	}
@@ -27,5 +27,22 @@ func TestProcessTestEnvironmentContainsAllUserStatePaths(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			requireTestPathWithin(t, home, path)
 		})
+	}
+}
+
+// TestStatsDirResolution pins the stats data root: <state home>/stats, where
+// the state home is INX_STATE_HOME when set and INX_HOME otherwise.
+// Usage records live under the state root — not the install directory, which
+// is replaced on upgrade — so a wrong resolution would silently lose stats.
+func TestStatsDirResolution(t *testing.T) {
+	home := t.TempDir()
+	state := t.TempDir()
+	t.Setenv("INX_HOME", home)
+	if got := StatsDir(); got != filepath.Join(home, "stats") {
+		t.Fatalf("INX_HOME stats dir: want %q, got %q", filepath.Join(home, "stats"), got)
+	}
+	t.Setenv("INX_STATE_HOME", state)
+	if got := StatsDir(); got != filepath.Join(state, "stats") {
+		t.Fatalf("INX_STATE_HOME stats dir: want %q, got %q", filepath.Join(state, "stats"), got)
 	}
 }

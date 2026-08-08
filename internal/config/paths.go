@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"unicode/utf8"
 
@@ -334,10 +335,10 @@ func RemoteKnownHostsPath() string {
 	return filepath.Join(dir, "known_hosts")
 }
 
-// MissingReasoningWarnStateDir is the shared directory for rate-limited
-// provider diagnostics such as the missing tool-call thinking warning (#7059):
-// <Inx home>/state. Routed through the home resolver so INX_HOME
-// isolation holds.
+// MissingReasoningWarnStateDir is the shared directory for the rate-limited
+// missing tool-call thinking recovery gate (#7059): <Inx home>/state. The
+// legacy name preserves callers and the existing state-file contract. Routed
+// through the home resolver so INX_HOME isolation holds.
 func MissingReasoningWarnStateDir() string {
 	home := inxHomeDir()
 	if strings.TrimSpace(home) == "" {
@@ -431,6 +432,19 @@ func SessionDir() string {
 		return ""
 	}
 	return filepath.Join(dir, "sessions")
+}
+
+// StatsDir is where usage statistics are persisted (one .jsonl per day, e.g.
+// stats/2026-08-02.jsonl). It lives under the user state root — not the install
+// directory, which is typically read-only and replaced on upgrade — so usage
+// records survive app updates. Empty if the user state dir can't be resolved,
+// in which case usage accounting is skipped.
+func StatsDir() string {
+	dir := userSupportDir()
+	if dir == "" {
+		return ""
+	}
+	return filepath.Join(dir, "stats")
 }
 
 // ProjectSessionDir is the per-workspace session directory the desktop sidebar
@@ -527,8 +541,8 @@ var ConventionDirs = []string{".inx", ".agents", ".agent", ".claude"}
 // highest-priority entry — command.Load lets a later directory win on a clash.
 func conventionSubdirsAsc(base, sub string) []string {
 	out := make([]string, 0, len(ConventionDirs))
-	for i := len(ConventionDirs) - 1; i >= 0; i-- {
-		out = append(out, filepath.Join(base, ConventionDirs[i], sub))
+	for _, v := range slices.Backward(ConventionDirs) {
+		out = append(out, filepath.Join(base, v, sub))
 	}
 	return out
 }

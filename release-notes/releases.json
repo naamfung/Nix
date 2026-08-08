@@ -6,8 +6,8 @@
       "date": "2026-08-07",
       "channel": "stable",
       "title": {
-        "en": "Reasonix v1.21.2: Output Budgets, Cache-Aware Context, and Agent Hardening",
-        "zh": "Reasonix v1.21.2：输出预算提升、缓存感知上下文与 Agent 加固"
+        "en": "Inx v1.21.2: Output Budgets, Cache-Aware Context, and Agent Hardening",
+        "zh": "Inx v1.21.2：输出预算提升、缓存感知上下文与 Agent 加固"
       },
       "summary": {
         "en": "This release raises output budgets to 128K, introduces cache-aware context projection for more efficient history management, hardens agent behavior with work-practice policies, and fixes issues in file tools, sandbox detection, hooks, and updates.",
@@ -26,7 +26,7 @@
             "en": "Learn how to use the Agent Communication Protocol for editor integration.",
             "zh": "了解如何使用 Agent 通信协议进行编辑器集成。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/c2526217b992c31bbbbeac4506d70c3153d65ac3/docs/ACP.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/c2526217b992c31bbbbeac4506d70c3153d65ac3/docs/ACP.md"
         },
         {
           "title": {
@@ -37,7 +37,7 @@
             "en": "Chinese version of the ACP guide.",
             "zh": "ACP 指南的中文版本。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/c2526217b992c31bbbbeac4506d70c3153d65ac3/docs/ACP.zh-CN.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/c2526217b992c31bbbbeac4506d70c3153d65ac3/docs/ACP.zh-CN.md"
         },
         {
           "title": {
@@ -48,7 +48,7 @@
             "en": "Guide for configuring and using desktop hooks.",
             "zh": "配置和使用桌面钩子的指南。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/c2526217b992c31bbbbeac4506d70c3153d65ac3/docs/DESKTOP_HOOKS.zh-CN.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/c2526217b992c31bbbbeac4506d70c3153d65ac3/docs/DESKTOP_HOOKS.zh-CN.md"
         },
         {
           "title": {
@@ -56,10 +56,10 @@
             "zh": "用户指南"
           },
           "body": {
-            "en": "Comprehensive guide to using Reasonix.",
-            "zh": "使用 Reasonix 的综合指南。"
+            "en": "Comprehensive guide to using Inx.",
+            "zh": "使用 Inx 的综合指南。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/c2526217b992c31bbbbeac4506d70c3153d65ac3/docs/GUIDE.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/c2526217b992c31bbbbeac4506d70c3153d65ac3/docs/GUIDE.md"
         },
         {
           "title": {
@@ -70,7 +70,7 @@
             "en": "Chinese version of the user guide.",
             "zh": "用户指南的中文版本。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/c2526217b992c31bbbbeac4506d70c3153d65ac3/docs/GUIDE.zh-CN.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/c2526217b992c31bbbbeac4506d70c3153d65ac3/docs/GUIDE.zh-CN.md"
         },
         {
           "title": {
@@ -81,7 +81,7 @@
             "en": "Documentation for creating and managing plugin packages.",
             "zh": "创建和管理插件包的文档。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/c2526217b992c31bbbbeac4506d70c3153d65ac3/docs/PLUGIN_PACKAGES.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/c2526217b992c31bbbbeac4506d70c3153d65ac3/docs/PLUGIN_PACKAGES.md"
         },
         {
           "title": {
@@ -92,7 +92,7 @@
             "en": "Chinese version of the plugin packages documentation.",
             "zh": "插件包文档的中文版本。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/c2526217b992c31bbbbeac4506d70c3153d65ac3/docs/PLUGIN_PACKAGES.zh-CN.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/c2526217b992c31bbbbeac4506d70c3153d65ac3/docs/PLUGIN_PACKAGES.zh-CN.md"
         },
         {
           "title": {
@@ -103,7 +103,7 @@
             "en": "Steps to recover from stuck updates and other issues.",
             "zh": "从卡住的更新和其他问题中恢复的步骤。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/c2526217b992c31bbbbeac4506d70c3153d65ac3/docs/RECOVERY.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/c2526217b992c31bbbbeac4506d70c3153d65ac3/docs/RECOVERY.md"
         },
         {
           "title": {
@@ -114,7 +114,7 @@
             "en": "Chinese version of the recovery guide.",
             "zh": "恢复指南的中文版本。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/c2526217b992c31bbbbeac4506d70c3153d65ac3/docs/RECOVERY.zh-CN.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/c2526217b992c31bbbbeac4506d70c3153d65ac3/docs/RECOVERY.zh-CN.md"
         },
         {
           "title": {
@@ -122,10 +122,10 @@
             "zh": "规范"
           },
           "body": {
-            "en": "Technical specification for Reasonix.",
-            "zh": "Reasonix 的技术规范。"
+            "en": "Technical specification for Inx.",
+            "zh": "Inx 的技术规范。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/c2526217b992c31bbbbeac4506d70c3153d65ac3/docs/SPEC.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/c2526217b992c31bbbbeac4506d70c3153d65ac3/docs/SPEC.md"
         },
         {
           "title": {
@@ -136,7 +136,7 @@
             "en": "Research document on cache-aware context projection.",
             "zh": "关于缓存感知上下文投影的研究文档。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/c2526217b992c31bbbbeac4506d70c3153d65ac3/docs/research/cache-aware-compaction-design.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/c2526217b992c31bbbbeac4506d70c3153d65ac3/docs/research/cache-aware-compaction-design.md"
         }
       ],
       "highlights": [
@@ -423,9 +423,9 @@
         "Nath-Vikky"
       ],
       "links": {
-        "github": "https://github.com/esengine/DeepSeek-Reasonix/releases/tag/desktop-v1.21.2",
-        "compare": "https://github.com/esengine/DeepSeek-Reasonix/compare/desktop-v1.21.1...desktop-v1.21.2",
-        "download": "https://reasonix.io/?download=desktop&channel=stable#start"
+        "github": "https://github.com/esengine/DeepSeek-Inx/releases/tag/desktop-v1.21.2",
+        "compare": "https://github.com/esengine/DeepSeek-Inx/compare/desktop-v1.21.1...desktop-v1.21.2",
+        "download": "https://inx.io/?download=desktop&channel=stable#start"
       },
       "releaseId": "1.21.2",
       "baseVersion": "1.21.2",
@@ -442,8 +442,8 @@
       "date": "2026-08-07",
       "channel": "stable",
       "title": {
-        "en": "Reasonix 1.21.1",
-        "zh": "Reasonix 1.21.1"
+        "en": "Inx 1.21.1",
+        "zh": "Inx 1.21.1"
       },
       "summary": {
         "en": "Fixes a permanent updater deadlock on Windows/macOS and a TUI watchdog false-kill issue, plus internal refactors for maintainability.",
@@ -528,9 +528,9 @@
         "esengine"
       ],
       "links": {
-        "github": "https://github.com/esengine/DeepSeek-Reasonix/releases/tag/desktop-v1.21.1",
-        "compare": "https://github.com/esengine/DeepSeek-Reasonix/compare/desktop-v1.21.0...desktop-v1.21.1",
-        "download": "https://reasonix.io/?download=desktop&channel=stable#start"
+        "github": "https://github.com/esengine/DeepSeek-Inx/releases/tag/desktop-v1.21.1",
+        "compare": "https://github.com/esengine/DeepSeek-Inx/compare/desktop-v1.21.0...desktop-v1.21.1",
+        "download": "https://inx.io/?download=desktop&channel=stable#start"
       },
       "releaseId": "1.21.1",
       "baseVersion": "1.21.1",
@@ -547,8 +547,8 @@
       "date": "2026-08-06",
       "channel": "stable",
       "title": {
-        "en": "Reasonix 1.21.0: Shell Execution Contract, Cache Accuracy, and CLI Polish",
-        "zh": "Reasonix 1.21.0：Shell 执行契约、缓存精度与 CLI 打磨"
+        "en": "Inx 1.21.0: Shell Execution Contract, Cache Accuracy, and CLI Polish",
+        "zh": "Inx 1.21.0：Shell 执行契约、缓存精度与 CLI 打磨"
       },
       "summary": {
         "en": "This release introduces a structured shell execution contract with phase-aware error reporting, improves prompt-cache hit rates and cost accounting, and delivers a wave of CLI and desktop refinements — including stream recovery, session temp persistence, and a refreshed website.",
@@ -564,10 +564,10 @@
             "zh": "Shell 执行契约"
           },
           "body": {
-            "en": "Learn how Reasonix now reports shell identity, exit phase, and verification status for every command.",
-            "zh": "了解 Reasonix 如何为每条命令报告 Shell 身份、退出阶段与验证状态。"
+            "en": "Learn how Inx now reports shell identity, exit phase, and verification status for every command.",
+            "zh": "了解 Inx 如何为每条命令报告 Shell 身份、退出阶段与验证状态。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/a44361deba5de2e5450fc9ef63c382dafe585b48/docs/GUIDE.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/a44361deba5de2e5450fc9ef63c382dafe585b48/docs/GUIDE.md"
         },
         {
           "title": {
@@ -578,7 +578,7 @@
             "en": "Bash temporary files now persist across commands within a session, with automatic cleanup.",
             "zh": "Bash 临时文件现在在会话内的多条命令间持久保留，并自动清理。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/a44361deba5de2e5450fc9ef63c382dafe585b48/docs/GUIDE.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/a44361deba5de2e5450fc9ef63c382dafe585b48/docs/GUIDE.md"
         },
         {
           "title": {
@@ -589,7 +589,7 @@
             "en": "You can now hide per-turn token/cost receipts in the TUI while keeping usage accounting active.",
             "zh": "现在可以在 TUI 中隐藏每轮 token/费用回执，同时保持用量统计活跃。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/a44361deba5de2e5450fc9ef63c382dafe585b48/docs/CONFIG_PATHS.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/a44361deba5de2e5450fc9ef63c382dafe585b48/docs/CONFIG_PATHS.md"
         }
       ],
       "highlights": [
@@ -746,8 +746,8 @@
               "zh": "CLI：版本元信息与 Shell 补全"
             },
             "body": {
-              "en": "`reasonix version --verbose/--json` shows commit and build time. Shell completion registry aligned with real parsers.",
-              "zh": "`reasonix version --verbose/--json` 显示提交与构建时间。Shell 补全注册表与实际解析器对齐。"
+              "en": "`inx version --verbose/--json` shows commit and build time. Shell completion registry aligned with real parsers.",
+              "zh": "`inx version --verbose/--json` 显示提交与构建时间。Shell 补全注册表与实际解析器对齐。"
             },
             "refs": [
               7740
@@ -800,8 +800,8 @@
               "zh": "CLI：`--profile` 标志路由至交互式会话"
             },
             "body": {
-              "en": "Bare `reasonix --profile …` now correctly dispatches to the interactive session path as documented.",
-              "zh": "无子命令的 `reasonix --profile …` 现在按文档正确路由至交互式会话路径。"
+              "en": "Bare `inx --profile …` now correctly dispatches to the interactive session path as documented.",
+              "zh": "无子命令的 `inx --profile …` 现在按文档正确路由至交互式会话路径。"
             },
             "refs": [
               7656
@@ -809,12 +809,12 @@
           },
           {
             "title": {
-              "en": "CLI: Diagnostics, keyring migration, and Reasonix-home hardening",
-              "zh": "CLI：诊断、密钥环迁移与 Reasonix-home 加固"
+              "en": "CLI: Diagnostics, keyring migration, and Inx-home hardening",
+              "zh": "CLI：诊断、密钥环迁移与 Inx-home 加固"
             },
             "body": {
-              "en": "Startup diagnostics now expose progress and bounded recovery signals, keyring migration fails closed under timeout or error, and CLI tooling consistently uses the exact Reasonix home while redacting paths in reports.",
-              "zh": "启动诊断现在提供进度与有界恢复信号；密钥环迁移在超时或错误时安全停止；CLI 工具统一使用准确的 Reasonix home，并在报告中隐藏路径。"
+              "en": "Startup diagnostics now expose progress and bounded recovery signals, keyring migration fails closed under timeout or error, and CLI tooling consistently uses the exact Inx home while redacting paths in reports.",
+              "zh": "启动诊断现在提供进度与有界恢复信号；密钥环迁移在超时或错误时安全停止；CLI 工具统一使用准确的 Inx home，并在报告中隐藏路径。"
             },
             "refs": [
               7663
@@ -839,8 +839,8 @@
               "zh": "Serve：为迟到的 SSE 客户端重放待处理提示"
             },
             "body": {
-              "en": "When a browser attaches to `reasonix serve` after a confirm-gated tool is queued, the pending approval prompt is now replayed.",
-              "zh": "当浏览器在确认门控工具排队后连接到 `reasonix serve` 时，现在会重放待处理的批准提示。"
+              "en": "When a browser attaches to `inx serve` after a confirm-gated tool is queued, the pending approval prompt is now replayed.",
+              "zh": "当浏览器在确认门控工具排队后连接到 `inx serve` 时，现在会重放待处理的批准提示。"
             },
             "refs": [
               7708
@@ -921,9 +921,9 @@
         "mife-user"
       ],
       "links": {
-        "github": "https://github.com/esengine/DeepSeek-Reasonix/releases/tag/desktop-v1.21.0",
-        "compare": "https://github.com/esengine/DeepSeek-Reasonix/compare/desktop-v1.20.0...desktop-v1.21.0",
-        "download": "https://reasonix.io/?download=desktop&channel=stable#start"
+        "github": "https://github.com/esengine/DeepSeek-Inx/releases/tag/desktop-v1.21.0",
+        "compare": "https://github.com/esengine/DeepSeek-Inx/compare/desktop-v1.20.0...desktop-v1.21.0",
+        "download": "https://inx.io/?download=desktop&channel=stable#start"
       },
       "releaseId": "1.21.0",
       "baseVersion": "1.21.0",
@@ -970,7 +970,7 @@
             "en": "Learn about the stable JSON-RPC sidecar protocol, Plugin Manifest v1, and the Go SDK.",
             "zh": "了解稳定的 JSON-RPC 边车协议、Plugin Manifest v1 和 Go SDK。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/73bc4e0c1a8fd859b2b1c648d1f2c019e4a5c448/docs/EXTENSION_PROTOCOL.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/73bc4e0c1a8fd859b2b1c648d1f2c019e4a5c448/docs/EXTENSION_PROTOCOL.md"
         },
         {
           "title": {
@@ -981,7 +981,7 @@
             "en": "Read the Chinese guide to the new update_goal tool and fail-closed completion flow.",
             "zh": "新的 update_goal 工具与安全停止完成机制如何工作。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/73bc4e0c1a8fd859b2b1c648d1f2c019e4a5c448/docs/GOAL_ENFORCEMENT.zh-CN.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/73bc4e0c1a8fd859b2b1c648d1f2c019e4a5c448/docs/GOAL_ENFORCEMENT.zh-CN.md"
         },
         {
           "title": {
@@ -992,7 +992,7 @@
             "en": "Bounded progress forwarding for task, parallel_tasks, and fleet.",
             "zh": "task、parallel_tasks 和 fleet 的有界进度转发。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/73bc4e0c1a8fd859b2b1c648d1f2c019e4a5c448/docs/SUBAGENT_PROGRESS.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/73bc4e0c1a8fd859b2b1c648d1f2c019e4a5c448/docs/SUBAGENT_PROGRESS.md"
         }
       ],
       "highlights": [
@@ -1362,9 +1362,9 @@
         "HaoyueQin"
       ],
       "links": {
-        "github": "https://github.com/esengine/DeepSeek-Reasonix/releases/tag/desktop-v1.20.0",
-        "compare": "https://github.com/esengine/DeepSeek-Reasonix/compare/desktop-v1.19.7...desktop-v1.20.0",
-        "download": "https://reasonix.io/?download=desktop&channel=stable#start"
+        "github": "https://github.com/esengine/DeepSeek-Inx/releases/tag/desktop-v1.20.0",
+        "compare": "https://github.com/esengine/DeepSeek-Inx/compare/desktop-v1.19.7...desktop-v1.20.0",
+        "download": "https://inx.io/?download=desktop&channel=stable#start"
       },
       "releaseId": "1.20.0",
       "baseVersion": "1.20.0",
@@ -1381,8 +1381,8 @@
       "date": "2026-08-05",
       "channel": "stable",
       "title": {
-        "en": "Reasonix v1.19.7",
-        "zh": "Reasonix v1.19.7"
+        "en": "Inx v1.19.7",
+        "zh": "Inx v1.19.7"
       },
       "summary": {
         "en": "This release improves sub-agent result handling, adds server-side web search controls, fixes multiple desktop and agent issues, and includes various stability and usability enhancements.",
@@ -1406,10 +1406,10 @@
             "zh": "用户指南"
           },
           "body": {
-            "en": "Learn how to use Reasonix effectively.",
-            "zh": "了解如何有效使用 Reasonix。"
+            "en": "Learn how to use Inx effectively.",
+            "zh": "了解如何有效使用 Inx。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/93243ab14b95c8235cf21ddae455ac9e453cb1b6/docs/GUIDE.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/93243ab14b95c8235cf21ddae455ac9e453cb1b6/docs/GUIDE.md"
         },
         {
           "title": {
@@ -1417,10 +1417,10 @@
             "zh": "用户指南（中文）"
           },
           "body": {
-            "en": "Learn how to use Reasonix effectively (Chinese).",
-            "zh": "了解如何有效使用 Reasonix（中文）。"
+            "en": "Learn how to use Inx effectively (Chinese).",
+            "zh": "了解如何有效使用 Inx（中文）。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/93243ab14b95c8235cf21ddae455ac9e453cb1b6/docs/GUIDE.zh-CN.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/93243ab14b95c8235cf21ddae455ac9e453cb1b6/docs/GUIDE.zh-CN.md"
         },
         {
           "title": {
@@ -1428,10 +1428,10 @@
             "zh": "规范"
           },
           "body": {
-            "en": "Reasonix technical specification.",
-            "zh": "Reasonix 技术规范。"
+            "en": "Inx technical specification.",
+            "zh": "Inx 技术规范。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/93243ab14b95c8235cf21ddae455ac9e453cb1b6/docs/SPEC.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/93243ab14b95c8235cf21ddae455ac9e453cb1b6/docs/SPEC.md"
         },
         {
           "title": {
@@ -1439,10 +1439,10 @@
             "zh": "工具契约"
           },
           "body": {
-            "en": "Details of the tool contract used by Reasonix.",
-            "zh": "Reasonix 使用的工具契约详情。"
+            "en": "Details of the tool contract used by Inx.",
+            "zh": "Inx 使用的工具契约详情。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/93243ab14b95c8235cf21ddae455ac9e453cb1b6/docs/TOOL_CONTRACT.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/93243ab14b95c8235cf21ddae455ac9e453cb1b6/docs/TOOL_CONTRACT.md"
         },
         {
           "title": {
@@ -1450,10 +1450,10 @@
             "zh": "工具契约（中文）"
           },
           "body": {
-            "en": "Details of the tool contract used by Reasonix (Chinese).",
-            "zh": "Reasonix 使用的工具契约详情（中文）。"
+            "en": "Details of the tool contract used by Inx (Chinese).",
+            "zh": "Inx 使用的工具契约详情（中文）。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/93243ab14b95c8235cf21ddae455ac9e453cb1b6/docs/TOOL_CONTRACT.zh-CN.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/93243ab14b95c8235cf21ddae455ac9e453cb1b6/docs/TOOL_CONTRACT.zh-CN.md"
         }
       ],
       "highlights": [
@@ -1693,8 +1693,8 @@
           },
           {
             "title": {
-              "en": "Resolve global hooks from platform Reasonix home in hook machine",
-              "zh": "在 hook 机器中从平台 Reasonix 主目录解析全局钩子"
+              "en": "Resolve global hooks from platform Inx home in hook machine",
+              "zh": "在 hook 机器中从平台 Inx 主目录解析全局钩子"
             },
             "body": {
               "en": "Fixed hook status/list commands reporting global hooks as missing when they are configured.",
@@ -1830,9 +1830,9 @@
         "liaoyl830"
       ],
       "links": {
-        "github": "https://github.com/esengine/DeepSeek-Reasonix/releases/tag/desktop-v1.19.7",
-        "compare": "https://github.com/esengine/DeepSeek-Reasonix/compare/desktop-v1.19.6...desktop-v1.19.7",
-        "download": "https://reasonix.io/?download=desktop&channel=stable#start"
+        "github": "https://github.com/esengine/DeepSeek-Inx/releases/tag/desktop-v1.19.7",
+        "compare": "https://github.com/esengine/DeepSeek-Inx/compare/desktop-v1.19.6...desktop-v1.19.7",
+        "download": "https://inx.io/?download=desktop&channel=stable#start"
       },
       "releaseId": "1.19.7",
       "baseVersion": "1.19.7",
@@ -1871,10 +1871,10 @@
             "zh": "内置文档"
           },
           "body": {
-            "en": "Use /docs to access version-matched product documentation directly in Reasonix.",
-            "zh": "使用 /docs 直接在 Reasonix 中访问版本匹配的产品文档。"
+            "en": "Use /docs to access version-matched product documentation directly in Inx.",
+            "zh": "使用 /docs 直接在 Inx 中访问版本匹配的产品文档。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/786dc6d33e5ee396f17a3b7e936b803008deaa96/docs/GUIDE.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/786dc6d33e5ee396f17a3b7e936b803008deaa96/docs/GUIDE.md"
         }
       ],
       "highlights": [
@@ -1885,8 +1885,8 @@
             "zh": "内置版本匹配文档"
           },
           "body": {
-            "en": "Access official product docs and release history directly in Reasonix with the /docs command. The built-in docs tool retrieves version-matched evidence before the AI composes an answer.",
-            "zh": "使用 /docs 命令直接在 Reasonix 中访问官方产品文档和发布历史。内置文档工具在 AI 撰写答案前检索版本匹配的证据。"
+            "en": "Access official product docs and release history directly in Inx with the /docs command. The built-in docs tool retrieves version-matched evidence before the AI composes an answer.",
+            "zh": "使用 /docs 命令直接在 Inx 中访问官方产品文档和发布历史。内置文档工具在 AI 撰写答案前检索版本匹配的证据。"
           },
           "refs": [
             7402
@@ -1965,8 +1965,8 @@
               "zh": "内置版本匹配文档"
             },
             "body": {
-              "en": "Access official product docs and release history directly in Reasonix with the /docs command.",
-              "zh": "使用 /docs 命令直接在 Reasonix 中访问官方产品文档和发布历史。"
+              "en": "Access official product docs and release history directly in Inx with the /docs command.",
+              "zh": "使用 /docs 命令直接在 Inx 中访问官方产品文档和发布历史。"
             },
             "refs": [
               7402
@@ -2046,8 +2046,8 @@
               "zh": "工作区配置覆盖警告"
             },
             "body": {
-              "en": "The settings panel now warns when a workspace reasonix.toml overrides the user config.",
-              "zh": "设置面板现在会在工作区 reasonix.toml 覆盖用户配置时发出警告。"
+              "en": "The settings panel now warns when a workspace inx.toml overrides the user config.",
+              "zh": "设置面板现在会在工作区 inx.toml 覆盖用户配置时发出警告。"
             },
             "refs": [
               7413
@@ -2202,8 +2202,8 @@
               "zh": "已删除的工作区文件夹不再重新创建"
             },
             "body": {
-              "en": "Deleting a workspace folder in Explorer no longer causes Reasonix to recreate it on startup.",
-              "zh": "在资源管理器中删除工作区文件夹不再导致 Reasonix 在启动时重新创建它。"
+              "en": "Deleting a workspace folder in Explorer no longer causes Inx to recreate it on startup.",
+              "zh": "在资源管理器中删除工作区文件夹不再导致 Inx 在启动时重新创建它。"
             },
             "refs": [
               7432
@@ -2295,8 +2295,8 @@
               "zh": "CLI 升级 GitHub 认证"
             },
             "body": {
-              "en": "reasonix upgrade now uses GITHUB_TOKEN for authenticated GitHub API requests, avoiding rate limits.",
-              "zh": "reasonix upgrade 现在使用 GITHUB_TOKEN 进行认证的 GitHub API 请求，避免速率限制。"
+              "en": "inx upgrade now uses GITHUB_TOKEN for authenticated GitHub API requests, avoiding rate limits.",
+              "zh": "inx upgrade 现在使用 GITHUB_TOKEN 进行认证的 GitHub API 请求，避免速率限制。"
             },
             "refs": [
               7418
@@ -2422,9 +2422,9 @@
         "tic-top"
       ],
       "links": {
-        "github": "https://github.com/esengine/DeepSeek-Reasonix/releases/tag/desktop-v1.19.6",
-        "compare": "https://github.com/esengine/DeepSeek-Reasonix/compare/desktop-v1.19.5...desktop-v1.19.6",
-        "download": "https://reasonix.io/?download=desktop&channel=stable#start"
+        "github": "https://github.com/esengine/DeepSeek-Inx/releases/tag/desktop-v1.19.6",
+        "compare": "https://github.com/esengine/DeepSeek-Inx/compare/desktop-v1.19.5...desktop-v1.19.6",
+        "download": "https://inx.io/?download=desktop&channel=stable#start"
       },
       "releaseId": "1.19.6",
       "baseVersion": "1.19.6",
@@ -2460,25 +2460,25 @@
       "guides": [
         {
           "title": {
-            "en": "Reasonix CLI guide",
-            "zh": "Reasonix CLI 指南"
+            "en": "Inx CLI guide",
+            "zh": "Inx CLI 指南"
           },
           "body": {
             "en": "Configure and inspect the context-compaction threshold from the command line.",
             "zh": "从命令行配置并查看上下文压缩阈值。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/bf0be67b7c4fa321ce4c57a5b39e31f32251095a/docs/CLI.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/bf0be67b7c4fa321ce4c57a5b39e31f32251095a/docs/CLI.md"
         },
         {
           "title": {
-            "en": "Reasonix specification",
-            "zh": "Reasonix 规范文档"
+            "en": "Inx specification",
+            "zh": "Inx 规范文档"
           },
           "body": {
             "en": "Review the configuration and provider behavior documented for this release.",
             "zh": "查看本版本记录的配置与提供商行为。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/bf0be67b7c4fa321ce4c57a5b39e31f32251095a/docs/SPEC.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/bf0be67b7c4fa321ce4c57a5b39e31f32251095a/docs/SPEC.md"
         }
       ],
       "highlights": [
@@ -2503,8 +2503,8 @@
             "zh": "可配置的上下文压缩阈值"
           },
           "body": {
-            "en": "Choose guarded 70%, 80%, or 85% presets, or a custom 65%–85% threshold, from Desktop or the new `reasonix config compact-ratio` command. Project overrides and effective configuration sources are shown explicitly.",
-            "zh": "可在桌面端或新的 `reasonix config compact-ratio` 命令中选择受保护的 70%、80%、85% 预设，或 65%–85% 的自定义阈值，并明确显示项目覆盖与有效配置来源。"
+            "en": "Choose guarded 70%, 80%, or 85% presets, or a custom 65%–85% threshold, from Desktop or the new `inx config compact-ratio` command. Project overrides and effective configuration sources are shown explicitly.",
+            "zh": "可在桌面端或新的 `inx config compact-ratio` 命令中选择受保护的 70%、80%、85% 预设，或 65%–85% 的自定义阈值，并明确显示项目覆盖与有效配置来源。"
           },
           "refs": [
             7233
@@ -2517,8 +2517,8 @@
             "zh": "可选的服务端网页搜索"
           },
           "body": {
-            "en": "Anthropic-compatible providers can opt into the typed server-side web-search tool with `web_search = true`; search results stream back into the transcript without adding a search backend to Reasonix core.",
-            "zh": "Anthropic 兼容提供商可通过 `web_search = true` 启用类型化的服务端网页搜索工具；搜索结果会流式写入会话，无需在 Reasonix 核心中引入搜索后端。"
+            "en": "Anthropic-compatible providers can opt into the typed server-side web-search tool with `web_search = true`; search results stream back into the transcript without adding a search backend to Inx core.",
+            "zh": "Anthropic 兼容提供商可通过 `web_search = true` 启用类型化的服务端网页搜索工具；搜索结果会流式写入会话，无需在 Inx 核心中引入搜索后端。"
           },
           "refs": [
             7340
@@ -2824,8 +2824,8 @@
             "zh": "网页搜索用量可见性"
           },
           "body": {
-            "en": "When `web_search = true` is enabled, provider-side searches and returned result text can add metered search requests and input tokens; those search-request counts are not yet surfaced in Reasonix's cost pipeline.",
-            "zh": "启用 `web_search = true` 后，提供商侧搜索及返回的结果文本可能增加计费搜索请求与输入 token；这些搜索请求次数尚未显示在 Reasonix 成本管线中。"
+            "en": "When `web_search = true` is enabled, provider-side searches and returned result text can add metered search requests and input tokens; those search-request counts are not yet surfaced in Inx's cost pipeline.",
+            "zh": "启用 `web_search = true` 后，提供商侧搜索及返回的结果文本可能增加计费搜索请求与输入 token；这些搜索请求次数尚未显示在 Inx 成本管线中。"
           },
           "refs": [
             7340
@@ -2843,9 +2843,9 @@
         "skyzhao1223"
       ],
       "links": {
-        "github": "https://github.com/esengine/DeepSeek-Reasonix/releases/tag/desktop-v1.19.5",
-        "compare": "https://github.com/esengine/DeepSeek-Reasonix/compare/desktop-v1.19.4...desktop-v1.19.5",
-        "download": "https://reasonix.io/?download=desktop&channel=stable#start"
+        "github": "https://github.com/esengine/DeepSeek-Inx/releases/tag/desktop-v1.19.5",
+        "compare": "https://github.com/esengine/DeepSeek-Inx/compare/desktop-v1.19.4...desktop-v1.19.5",
+        "download": "https://inx.io/?download=desktop&channel=stable#start"
       },
       "releaseId": "1.19.5",
       "baseVersion": "1.19.5",
@@ -2875,25 +2875,25 @@
       "guides": [
         {
           "title": {
-            "en": "Reasonix Specification",
-            "zh": "Reasonix 规范文档"
+            "en": "Inx Specification",
+            "zh": "Inx 规范文档"
           },
           "body": {
-            "en": "Refer to the Reasonix specification for detailed protocol and features.",
-            "zh": "请参阅 Reasonix 规范文档以获取协议和功能的详细信息。"
+            "en": "Refer to the Inx specification for detailed protocol and features.",
+            "zh": "请参阅 Inx 规范文档以获取协议和功能的详细信息。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/26e004f4bad2a51b635793dc7f0531222c6700f3/docs/SPEC.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/26e004f4bad2a51b635793dc7f0531222c6700f3/docs/SPEC.md"
         },
         {
           "title": {
-            "en": "Reasonix Specification (Chinese)",
-            "zh": "Reasonix 规范文档（中文）"
+            "en": "Inx Specification (Chinese)",
+            "zh": "Inx 规范文档（中文）"
           },
           "body": {
-            "en": "Refer to the Chinese version of the Reasonix specification.",
-            "zh": "请参阅 Reasonix 规范文档的中文版本。"
+            "en": "Refer to the Chinese version of the Inx specification.",
+            "zh": "请参阅 Inx 规范文档的中文版本。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/26e004f4bad2a51b635793dc7f0531222c6700f3/docs/SPEC.zh-CN.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/26e004f4bad2a51b635793dc7f0531222c6700f3/docs/SPEC.zh-CN.md"
         }
       ],
       "highlights": [
@@ -3006,8 +3006,8 @@
             "zh": "更新后自动修复原生快捷方式图标"
           },
           "body": {
-            "en": "Reasonix now repairs only owned, stale icon integrations after upgrades: version-scoped Windows shortcut icons, broken or outdated macOS Finder aliases, and Linux desktop icon caches. Healthy, unrelated, and customized integrations are preserved, and repair failures never block startup.",
-            "zh": "Reasonix 现在会在升级后仅修复自身拥有且已过期的图标集成：Windows 版本目录中的快捷方式图标、损坏或过期的 macOS Finder 别名，以及 Linux 桌面图标缓存。健康、无关或自定义的集成会被保留，修复失败也不会阻止启动。"
+            "en": "Inx now repairs only owned, stale icon integrations after upgrades: version-scoped Windows shortcut icons, broken or outdated macOS Finder aliases, and Linux desktop icon caches. Healthy, unrelated, and customized integrations are preserved, and repair failures never block startup.",
+            "zh": "Inx 现在会在升级后仅修复自身拥有且已过期的图标集成：Windows 版本目录中的快捷方式图标、损坏或过期的 macOS Finder 别名，以及 Linux 桌面图标缓存。健康、无关或自定义的集成会被保留，修复失败也不会阻止启动。"
           },
           "refs": [
             7296
@@ -3161,8 +3161,8 @@
               "zh": "更新后的原生图标修复"
             },
             "body": {
-              "en": "Repairs stale Reasonix-owned shortcut icons and aliases across Windows, macOS, and native Linux packages without overwriting healthy customizations.",
-              "zh": "在 Windows、macOS 与原生 Linux 包中修复 Reasonix 自有的过期快捷方式图标和别名，同时不覆盖健康的自定义设置。"
+              "en": "Repairs stale Inx-owned shortcut icons and aliases across Windows, macOS, and native Linux packages without overwriting healthy customizations.",
+              "zh": "在 Windows、macOS 与原生 Linux 包中修复 Inx 自有的过期快捷方式图标和别名，同时不覆盖健康的自定义设置。"
             },
             "refs": [
               7296
@@ -3206,9 +3206,9 @@
         "paradoxSCH"
       ],
       "links": {
-        "github": "https://github.com/esengine/DeepSeek-Reasonix/releases/tag/desktop-v1.19.4",
-        "compare": "https://github.com/esengine/DeepSeek-Reasonix/compare/desktop-v1.19.3...desktop-v1.19.4",
-        "download": "https://reasonix.io/?download=desktop&channel=stable#start"
+        "github": "https://github.com/esengine/DeepSeek-Inx/releases/tag/desktop-v1.19.4",
+        "compare": "https://github.com/esengine/DeepSeek-Inx/compare/desktop-v1.19.3...desktop-v1.19.4",
+        "download": "https://inx.io/?download=desktop&channel=stable#start"
       },
       "releaseId": "1.19.4",
       "baseVersion": "1.19.4",
@@ -3225,8 +3225,8 @@
       "date": "2026-08-02",
       "channel": "stable",
       "title": {
-        "en": "Reasonix Desktop 1.19.3: Atomic updates, recovery improvements, and a unified stable release",
-        "zh": "Reasonix Desktop 1.19.3：原子更新、恢复优化及统一稳定版本"
+        "en": "Inx Desktop 1.19.3: Atomic updates, recovery improvements, and a unified stable release",
+        "zh": "Inx Desktop 1.19.3：原子更新、恢复优化及统一稳定版本"
       },
       "summary": {
         "en": "This release introduces atomic desktop updates with a permanent launcher, removes Guard and Safe Mode, adds recovery actions for blocked Delivery workspaces, simplifies the release path to a single stable channel, and adds a GitHub link to the website.",
@@ -3242,10 +3242,10 @@
             "zh": "用户指南"
           },
           "body": {
-            "en": "Comprehensive guide for using Reasonix.",
-            "zh": "Reasonix 使用综合指南。"
+            "en": "Comprehensive guide for using Inx.",
+            "zh": "Inx 使用综合指南。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/427fba0f27078da287dfdb2baca1ff417ecbb0a5/docs/GUIDE.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/427fba0f27078da287dfdb2baca1ff417ecbb0a5/docs/GUIDE.md"
         },
         {
           "title": {
@@ -3253,10 +3253,10 @@
             "zh": "用户指南（简体中文）"
           },
           "body": {
-            "en": "Comprehensive guide for using Reasonix in Simplified Chinese.",
-            "zh": "Reasonix 使用综合指南（简体中文）。"
+            "en": "Comprehensive guide for using Inx in Simplified Chinese.",
+            "zh": "Inx 使用综合指南（简体中文）。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/427fba0f27078da287dfdb2baca1ff417ecbb0a5/docs/GUIDE.zh-CN.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/427fba0f27078da287dfdb2baca1ff417ecbb0a5/docs/GUIDE.zh-CN.md"
         },
         {
           "title": {
@@ -3264,10 +3264,10 @@
             "zh": "CLI 指南"
           },
           "body": {
-            "en": "Documentation for the Reasonix command-line interface.",
-            "zh": "Reasonix 命令行界面文档。"
+            "en": "Documentation for the Inx command-line interface.",
+            "zh": "Inx 命令行界面文档。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/427fba0f27078da287dfdb2baca1ff417ecbb0a5/docs/CLI.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/427fba0f27078da287dfdb2baca1ff417ecbb0a5/docs/CLI.md"
         },
         {
           "title": {
@@ -3275,10 +3275,10 @@
             "zh": "CLI 指南（简体中文）"
           },
           "body": {
-            "en": "Documentation for the Reasonix command-line interface in Simplified Chinese.",
-            "zh": "Reasonix 命令行界面文档（简体中文）。"
+            "en": "Documentation for the Inx command-line interface in Simplified Chinese.",
+            "zh": "Inx 命令行界面文档（简体中文）。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/427fba0f27078da287dfdb2baca1ff417ecbb0a5/docs/CLI.zh-CN.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/427fba0f27078da287dfdb2baca1ff417ecbb0a5/docs/CLI.zh-CN.md"
         },
         {
           "title": {
@@ -3289,7 +3289,7 @@
             "en": "Instructions for migrating from older versions.",
             "zh": "从旧版本迁移的说明。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/427fba0f27078da287dfdb2baca1ff417ecbb0a5/docs/MIGRATING.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/427fba0f27078da287dfdb2baca1ff417ecbb0a5/docs/MIGRATING.md"
         },
         {
           "title": {
@@ -3300,7 +3300,7 @@
             "en": "Instructions for migrating from older versions in Simplified Chinese.",
             "zh": "从旧版本迁移的说明（简体中文）。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/427fba0f27078da287dfdb2baca1ff417ecbb0a5/docs/MIGRATING.zh-CN.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/427fba0f27078da287dfdb2baca1ff417ecbb0a5/docs/MIGRATING.zh-CN.md"
         },
         {
           "title": {
@@ -3311,7 +3311,7 @@
             "en": "Steps to recover from installation or update issues.",
             "zh": "解决安装或更新问题的步骤。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/427fba0f27078da287dfdb2baca1ff417ecbb0a5/docs/RECOVERY.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/427fba0f27078da287dfdb2baca1ff417ecbb0a5/docs/RECOVERY.md"
         },
         {
           "title": {
@@ -3322,7 +3322,7 @@
             "en": "Steps to recover from installation or update issues in Simplified Chinese.",
             "zh": "解决安装或更新问题的步骤（简体中文）。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/427fba0f27078da287dfdb2baca1ff417ecbb0a5/docs/RECOVERY.zh-CN.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/427fba0f27078da287dfdb2baca1ff417ecbb0a5/docs/RECOVERY.zh-CN.md"
         }
       ],
       "highlights": [
@@ -3361,8 +3361,8 @@
             "zh": "工作区写入冲突恢复"
           },
           "body": {
-            "en": "When a Delivery workspace is blocked by another writer, Reasonix now shows a recovery dialog: reveal the local owner, continue in an isolated worktree, or cancel the waiting turn.",
-            "zh": "当 Delivery 工作区被另一个写入者阻塞时，Reasonix 现在会显示恢复对话框：显示本地所有者、在独立工作树中继续或取消等待。"
+            "en": "When a Delivery workspace is blocked by another writer, Inx now shows a recovery dialog: reveal the local owner, continue in an isolated worktree, or cancel the waiting turn.",
+            "zh": "当 Delivery 工作区被另一个写入者阻塞时，Inx 现在会显示恢复对话框：显示本地所有者、在独立工作树中继续或取消等待。"
           },
           "refs": [
             7198
@@ -3530,9 +3530,9 @@
         "SivanCola"
       ],
       "links": {
-        "github": "https://github.com/esengine/DeepSeek-Reasonix/releases/tag/desktop-v1.19.3",
-        "compare": "https://github.com/esengine/DeepSeek-Reasonix/compare/desktop-v1.19.2...desktop-v1.19.3",
-        "download": "https://reasonix.io/?download=desktop&channel=stable#start"
+        "github": "https://github.com/esengine/DeepSeek-Inx/releases/tag/desktop-v1.19.3",
+        "compare": "https://github.com/esengine/DeepSeek-Inx/compare/desktop-v1.19.2...desktop-v1.19.3",
+        "download": "https://inx.io/?download=desktop&channel=stable#start"
       },
       "releaseId": "1.19.3",
       "baseVersion": "1.19.3",
@@ -3549,8 +3549,8 @@
       "date": "2026-08-02",
       "channel": "stable",
       "title": {
-        "en": "Reasonix v1.19.2",
-        "zh": "Reasonix 1.19.2"
+        "en": "Inx v1.19.2",
+        "zh": "Inx 1.19.2"
       },
       "summary": {
         "en": "Unified update channel, adaptive syntax highlighting, and agent reliability fixes.",
@@ -3572,7 +3572,7 @@
             "en": "Comprehensive documentation for diagnosing and understanding capability states.",
             "zh": "有关诊断和理解能力状态的全面文档。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/f72874d49b56610edca9e6968816b12988386bb9/docs/CAPABILITY_DIAGNOSTICS.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/f72874d49b56610edca9e6968816b12988386bb9/docs/CAPABILITY_DIAGNOSTICS.md"
         },
         {
           "title": {
@@ -3580,10 +3580,10 @@
             "zh": "用户指南"
           },
           "body": {
-            "en": "General user guide for Reasonix.",
-            "zh": "Reasonix 通用用户指南。"
+            "en": "General user guide for Inx.",
+            "zh": "Inx 通用用户指南。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/f72874d49b56610edca9e6968816b12988386bb9/docs/GUIDE.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/f72874d49b56610edca9e6968816b12988386bb9/docs/GUIDE.md"
         },
         {
           "title": {
@@ -3591,10 +3591,10 @@
             "zh": "规范"
           },
           "body": {
-            "en": "Technical specification for Reasonix.",
-            "zh": "Reasonix 技术规范。"
+            "en": "Technical specification for Inx.",
+            "zh": "Inx 技术规范。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/f72874d49b56610edca9e6968816b12988386bb9/docs/SPEC.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/f72874d49b56610edca9e6968816b12988386bb9/docs/SPEC.md"
         }
       ],
       "highlights": [
@@ -3749,8 +3749,8 @@
             "zh": "更新通道迁移"
           },
           "body": {
-            "en": "Legacy update channels (stable, preview) have been unified into the official release channel. The old `--channel` option and `reasonix upgrade stable/preview` commands are still accepted but deprecated and will show a notice.",
-            "zh": "旧更新通道（stable、preview）已统一为官方发布通道。旧的 `--channel` 选项以及 `reasonix upgrade stable/preview` 命令仍然可用，但已被弃用并会显示提示。"
+            "en": "Legacy update channels (stable, preview) have been unified into the official release channel. The old `--channel` option and `inx upgrade stable/preview` commands are still accepted but deprecated and will show a notice.",
+            "zh": "旧更新通道（stable、preview）已统一为官方发布通道。旧的 `--channel` 选项以及 `inx upgrade stable/preview` 命令仍然可用，但已被弃用并会显示提示。"
           },
           "refs": [
             7201
@@ -3764,9 +3764,9 @@
         "Q1hangL"
       ],
       "links": {
-        "github": "https://github.com/esengine/DeepSeek-Reasonix/releases/tag/desktop-v1.19.2",
-        "compare": "https://github.com/esengine/DeepSeek-Reasonix/compare/v1.19.1...desktop-v1.19.2",
-        "download": "https://reasonix.io/?download=desktop&channel=stable#start"
+        "github": "https://github.com/esengine/DeepSeek-Inx/releases/tag/desktop-v1.19.2",
+        "compare": "https://github.com/esengine/DeepSeek-Inx/compare/v1.19.1...desktop-v1.19.2",
+        "download": "https://inx.io/?download=desktop&channel=stable#start"
       },
       "releaseId": "1.19.2",
       "baseVersion": "1.19.2",
@@ -3783,8 +3783,8 @@
       "date": "2026-08-02",
       "channel": "prerelease",
       "title": {
-        "en": "Reasonix 1.19.2 Preview 1",
-        "zh": "Reasonix 1.19.2 预览版 1"
+        "en": "Inx 1.19.2 Preview 1",
+        "zh": "Inx 1.19.2 预览版 1"
       },
       "summary": {
         "en": "Unified update channel, adaptive syntax highlighting, and multiple agent reliability fixes.",
@@ -3806,7 +3806,7 @@
             "en": "Documentation on diagnosing and understanding capability status.",
             "zh": "有关诊断和理解能力状态的文档。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/ede7ceef0011f8cf389d269c83fc16d9cfefd827/docs/CAPABILITY_DIAGNOSTICS.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/ede7ceef0011f8cf389d269c83fc16d9cfefd827/docs/CAPABILITY_DIAGNOSTICS.md"
         },
         {
           "title": {
@@ -3817,7 +3817,7 @@
             "en": "Documentation on diagnosing and understanding capability status (Chinese).",
             "zh": "有关诊断和理解能力状态的文档（中文）。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/ede7ceef0011f8cf389d269c83fc16d9cfefd827/docs/CAPABILITY_DIAGNOSTICS.zh-CN.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/ede7ceef0011f8cf389d269c83fc16d9cfefd827/docs/CAPABILITY_DIAGNOSTICS.zh-CN.md"
         },
         {
           "title": {
@@ -3825,10 +3825,10 @@
             "zh": "用户指南"
           },
           "body": {
-            "en": "General user guide for Reasonix.",
-            "zh": "Reasonix 通用用户指南。"
+            "en": "General user guide for Inx.",
+            "zh": "Inx 通用用户指南。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/ede7ceef0011f8cf389d269c83fc16d9cfefd827/docs/GUIDE.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/ede7ceef0011f8cf389d269c83fc16d9cfefd827/docs/GUIDE.md"
         },
         {
           "title": {
@@ -3836,10 +3836,10 @@
             "zh": "用户指南（中文）"
           },
           "body": {
-            "en": "General user guide for Reasonix (Chinese).",
-            "zh": "Reasonix 通用用户指南（中文）。"
+            "en": "General user guide for Inx (Chinese).",
+            "zh": "Inx 通用用户指南（中文）。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/ede7ceef0011f8cf389d269c83fc16d9cfefd827/docs/GUIDE.zh-CN.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/ede7ceef0011f8cf389d269c83fc16d9cfefd827/docs/GUIDE.zh-CN.md"
         },
         {
           "title": {
@@ -3847,10 +3847,10 @@
             "zh": "规范"
           },
           "body": {
-            "en": "Technical specification for Reasonix.",
-            "zh": "Reasonix 技术规范。"
+            "en": "Technical specification for Inx.",
+            "zh": "Inx 技术规范。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/ede7ceef0011f8cf389d269c83fc16d9cfefd827/docs/SPEC.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/ede7ceef0011f8cf389d269c83fc16d9cfefd827/docs/SPEC.md"
         },
         {
           "title": {
@@ -3858,10 +3858,10 @@
             "zh": "规范（中文）"
           },
           "body": {
-            "en": "Technical specification for Reasonix (Chinese).",
-            "zh": "Reasonix 技术规范（中文）。"
+            "en": "Technical specification for Inx (Chinese).",
+            "zh": "Inx 技术规范（中文）。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/ede7ceef0011f8cf389d269c83fc16d9cfefd827/docs/SPEC.zh-CN.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/ede7ceef0011f8cf389d269c83fc16d9cfefd827/docs/SPEC.zh-CN.md"
         }
       ],
       "highlights": [
@@ -4016,9 +4016,9 @@
         "Q1hangL"
       ],
       "links": {
-        "github": "https://github.com/esengine/DeepSeek-Reasonix/releases/tag/v1.19.2-preview.1",
-        "compare": "https://github.com/esengine/DeepSeek-Reasonix/compare/v1.19.1...v1.19.2-preview.1",
-        "download": "https://reasonix.io/?download=desktop&channel=preview#start"
+        "github": "https://github.com/esengine/DeepSeek-Inx/releases/tag/v1.19.2-preview.1",
+        "compare": "https://github.com/esengine/DeepSeek-Inx/compare/v1.19.1...v1.19.2-preview.1",
+        "download": "https://inx.io/?download=desktop&channel=preview#start"
       },
       "releaseId": "1.19.2-preview.1",
       "baseVersion": "1.19.2",
@@ -4035,8 +4035,8 @@
       "date": "2026-08-01",
       "channel": "stable",
       "title": {
-        "en": "Reasonix Desktop v1.19.1",
-        "zh": "Reasonix 桌面端 v1.19.1"
+        "en": "Inx Desktop v1.19.1",
+        "zh": "Inx 桌面端 v1.19.1"
       },
       "summary": {
         "en": "This stable release fixes several user-reported issues, including wallet currency alignment, macOS icon rendering, menu clipping, and update recovery.",
@@ -4241,9 +4241,9 @@
         "clearnature"
       ],
       "links": {
-        "github": "https://github.com/esengine/DeepSeek-Reasonix/releases/tag/desktop-v1.19.1",
-        "compare": "https://github.com/esengine/DeepSeek-Reasonix/compare/v1.19.0...desktop-v1.19.1",
-        "download": "https://reasonix.io/?download=desktop&channel=stable#start"
+        "github": "https://github.com/esengine/DeepSeek-Inx/releases/tag/desktop-v1.19.1",
+        "compare": "https://github.com/esengine/DeepSeek-Inx/compare/v1.19.0...desktop-v1.19.1",
+        "download": "https://inx.io/?download=desktop&channel=stable#start"
       },
       "releaseId": "1.19.1",
       "baseVersion": "1.19.1",
@@ -4280,7 +4280,7 @@
             "en": "Command-line interface usage and options.",
             "zh": "命令行界面用法与选项。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/CLI.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/CLI.md"
         },
         {
           "title": {
@@ -4291,7 +4291,7 @@
             "en": "Command-line interface usage and options in Chinese.",
             "zh": "命令行界面用法与选项（中文）。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/CLI.zh-CN.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/CLI.zh-CN.md"
         },
         {
           "title": {
@@ -4302,7 +4302,7 @@
             "en": "General usage guide.",
             "zh": "通用使用指南。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/GUIDE.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/GUIDE.md"
         },
         {
           "title": {
@@ -4313,7 +4313,7 @@
             "en": "General usage guide in Chinese.",
             "zh": "通用使用指南（中文）。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/GUIDE.zh-CN.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/GUIDE.zh-CN.md"
         },
         {
           "title": {
@@ -4324,7 +4324,7 @@
             "en": "Configuration for reasoning providers.",
             "zh": "推理提供商的配置。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/REASONING_PROVIDERS.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/REASONING_PROVIDERS.md"
         },
         {
           "title": {
@@ -4335,7 +4335,7 @@
             "en": "Documentation for releasing new versions.",
             "zh": "发布新版本的文档。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/RELEASING.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/RELEASING.md"
         },
         {
           "title": {
@@ -4346,7 +4346,7 @@
             "en": "Guide for using Remote Workbench.",
             "zh": "使用远程工作台的指南。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/REMOTE_WORKBENCH.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/REMOTE_WORKBENCH.md"
         },
         {
           "title": {
@@ -4357,7 +4357,7 @@
             "en": "Guide for using Remote Workbench in Chinese.",
             "zh": "使用远程工作台的指南（中文）。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/REMOTE_WORKBENCH.zh-CN.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/REMOTE_WORKBENCH.zh-CN.md"
         },
         {
           "title": {
@@ -4368,7 +4368,7 @@
             "en": "Standard operating procedure for Windows admin with SignPath.",
             "zh": "使用 SignPath 的 Windows 管理员标准操作流程。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/SIGNPATH_WINDOWS_ADMIN_SOP.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/SIGNPATH_WINDOWS_ADMIN_SOP.md"
         },
         {
           "title": {
@@ -4379,7 +4379,7 @@
             "en": "Technical specification.",
             "zh": "技术规格说明。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/SPEC.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/SPEC.md"
         },
         {
           "title": {
@@ -4390,7 +4390,7 @@
             "en": "Technical specification in Chinese.",
             "zh": "技术规格说明（中文）。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/SPEC.zh-CN.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/SPEC.zh-CN.md"
         },
         {
           "title": {
@@ -4401,7 +4401,7 @@
             "en": "Documentation for tool approval modes.",
             "zh": "工具审批模式的文档。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/TOOL_APPROVAL_MODES.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/TOOL_APPROVAL_MODES.md"
         },
         {
           "title": {
@@ -4412,7 +4412,7 @@
             "en": "Documentation for tool approval modes in Chinese.",
             "zh": "工具审批模式的文档（中文）。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/TOOL_APPROVAL_MODES.zh-CN.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/TOOL_APPROVAL_MODES.zh-CN.md"
         }
       ],
       "highlights": [
@@ -4909,9 +4909,9 @@
         "esengine"
       ],
       "links": {
-        "github": "https://github.com/esengine/DeepSeek-Reasonix/releases/tag/desktop-v1.19.0",
-        "compare": "https://github.com/esengine/DeepSeek-Reasonix/compare/v1.18.0...desktop-v1.19.0",
-        "download": "https://reasonix.io/?download=desktop&channel=stable#start"
+        "github": "https://github.com/esengine/DeepSeek-Inx/releases/tag/desktop-v1.19.0",
+        "compare": "https://github.com/esengine/DeepSeek-Inx/compare/v1.18.0...desktop-v1.19.0",
+        "download": "https://inx.io/?download=desktop&channel=stable#start"
       },
       "releaseId": "1.19.0",
       "baseVersion": "1.19.0",
@@ -4928,8 +4928,8 @@
       "date": "2026-08-01",
       "channel": "prerelease",
       "title": {
-        "en": "Reasonix Desktop v1.19.0-preview.3",
-        "zh": "Reasonix 桌面端 v1.19.0-preview.3"
+        "en": "Inx Desktop v1.19.0-preview.3",
+        "zh": "Inx 桌面端 v1.19.0-preview.3"
       },
       "summary": {
         "en": "This preview release resolves several user-reported issues, including wallet currency alignment, macOS icon rendering, menu clipping, and update recovery.",
@@ -5120,9 +5120,9 @@
         "clearnature"
       ],
       "links": {
-        "github": "https://github.com/esengine/DeepSeek-Reasonix/releases/tag/v1.19.0-preview.3",
-        "compare": "https://github.com/esengine/DeepSeek-Reasonix/compare/v1.19.0-preview.2...v1.19.0-preview.3",
-        "download": "https://reasonix.io/?download=desktop&channel=preview#start"
+        "github": "https://github.com/esengine/DeepSeek-Inx/releases/tag/v1.19.0-preview.3",
+        "compare": "https://github.com/esengine/DeepSeek-Inx/compare/v1.19.0-preview.2...v1.19.0-preview.3",
+        "download": "https://inx.io/?download=desktop&channel=preview#start"
       },
       "releaseId": "1.19.0-preview.3",
       "baseVersion": "1.19.0",
@@ -5204,9 +5204,9 @@
         "SivanCola"
       ],
       "links": {
-        "github": "https://github.com/esengine/DeepSeek-Reasonix/releases/tag/v1.19.0-preview.2",
-        "compare": "https://github.com/esengine/DeepSeek-Reasonix/compare/v1.19.0-preview.1...v1.19.0-preview.2",
-        "download": "https://reasonix.io/?download=desktop&channel=preview#start"
+        "github": "https://github.com/esengine/DeepSeek-Inx/releases/tag/v1.19.0-preview.2",
+        "compare": "https://github.com/esengine/DeepSeek-Inx/compare/v1.19.0-preview.1...v1.19.0-preview.2",
+        "download": "https://inx.io/?download=desktop&channel=preview#start"
       },
       "releaseId": "1.19.0-preview.2",
       "baseVersion": "1.19.0",
@@ -5243,7 +5243,7 @@
             "en": "Command-line interface usage and options.",
             "zh": "命令行界面用法与选项。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/CLI.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/CLI.md"
         },
         {
           "title": {
@@ -5254,7 +5254,7 @@
             "en": "Command-line interface usage and options in Chinese.",
             "zh": "命令行界面用法与选项（中文）。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/CLI.zh-CN.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/CLI.zh-CN.md"
         },
         {
           "title": {
@@ -5265,7 +5265,7 @@
             "en": "General usage guide.",
             "zh": "通用使用指南。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/GUIDE.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/GUIDE.md"
         },
         {
           "title": {
@@ -5276,7 +5276,7 @@
             "en": "General usage guide in Chinese.",
             "zh": "通用使用指南（中文）。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/GUIDE.zh-CN.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/GUIDE.zh-CN.md"
         },
         {
           "title": {
@@ -5287,7 +5287,7 @@
             "en": "Configuration for reasoning providers.",
             "zh": "推理提供商的配置。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/REASONING_PROVIDERS.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/REASONING_PROVIDERS.md"
         },
         {
           "title": {
@@ -5298,7 +5298,7 @@
             "en": "Documentation for releasing new versions.",
             "zh": "发布新版本的文档。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/RELEASING.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/RELEASING.md"
         },
         {
           "title": {
@@ -5309,7 +5309,7 @@
             "en": "Guide for using Remote Workbench.",
             "zh": "使用远程工作台的指南。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/REMOTE_WORKBENCH.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/REMOTE_WORKBENCH.md"
         },
         {
           "title": {
@@ -5320,7 +5320,7 @@
             "en": "Guide for using Remote Workbench in Chinese.",
             "zh": "使用远程工作台的指南（中文）。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/REMOTE_WORKBENCH.zh-CN.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/REMOTE_WORKBENCH.zh-CN.md"
         },
         {
           "title": {
@@ -5331,7 +5331,7 @@
             "en": "Standard operating procedure for Windows admin with SignPath.",
             "zh": "使用 SignPath 的 Windows 管理员标准操作流程。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/SIGNPATH_WINDOWS_ADMIN_SOP.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/SIGNPATH_WINDOWS_ADMIN_SOP.md"
         },
         {
           "title": {
@@ -5342,7 +5342,7 @@
             "en": "Technical specification.",
             "zh": "技术规格说明。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/SPEC.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/SPEC.md"
         },
         {
           "title": {
@@ -5353,7 +5353,7 @@
             "en": "Technical specification in Chinese.",
             "zh": "技术规格说明（中文）。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/SPEC.zh-CN.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/SPEC.zh-CN.md"
         },
         {
           "title": {
@@ -5364,7 +5364,7 @@
             "en": "Documentation for tool approval modes.",
             "zh": "工具审批模式的文档。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/TOOL_APPROVAL_MODES.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/TOOL_APPROVAL_MODES.md"
         },
         {
           "title": {
@@ -5375,7 +5375,7 @@
             "en": "Documentation for tool approval modes in Chinese.",
             "zh": "工具审批模式的文档（中文）。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/TOOL_APPROVAL_MODES.zh-CN.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/ee2ace1dbd3967d387ff50247e15e7fb53feaa0f/docs/TOOL_APPROVAL_MODES.zh-CN.md"
         }
       ],
       "highlights": [
@@ -5872,9 +5872,9 @@
         "esengine"
       ],
       "links": {
-        "github": "https://github.com/esengine/DeepSeek-Reasonix/releases/tag/v1.19.0-preview.1",
-        "compare": "https://github.com/esengine/DeepSeek-Reasonix/compare/v1.18.0-preview.2...v1.19.0-preview.1",
-        "download": "https://reasonix.io/?download=desktop&channel=preview#start"
+        "github": "https://github.com/esengine/DeepSeek-Inx/releases/tag/v1.19.0-preview.1",
+        "compare": "https://github.com/esengine/DeepSeek-Inx/compare/v1.18.0-preview.2...v1.19.0-preview.1",
+        "download": "https://inx.io/?download=desktop&channel=preview#start"
       },
       "releaseId": "1.19.0-preview.1",
       "baseVersion": "1.19.0",
@@ -5895,8 +5895,8 @@
         "zh": "上下文引擎 v2、内置终端与双发布渠道"
       },
       "summary": {
-        "en": "Reasonix 1.18.0 introduces Context Engine v2, integrated Desktop terminal sessions, and public Stable and Preview channels. It also adds Kimi K3, regional CNY/USD pricing and broader localization, improves large-session responsiveness, and hardens repair, authorization, artifact, telemetry, and release paths.",
-        "zh": "Reasonix 1.18.0 引入上下文引擎 v2、桌面端内置终端会话，以及公开的 Stable 与 Preview 双渠道；同时新增 Kimi K3、区域化人民币/美元计价与更完整的本地化，改善大型会话响应，并加固修复、授权、产物、遥测和发布链路。"
+        "en": "Inx 1.18.0 introduces Context Engine v2, integrated Desktop terminal sessions, and public Stable and Preview channels. It also adds Kimi K3, regional CNY/USD pricing and broader localization, improves large-session responsiveness, and hardens repair, authorization, artifact, telemetry, and release paths.",
+        "zh": "Inx 1.18.0 引入上下文引擎 v2、桌面端内置终端会话，以及公开的 Stable 与 Preview 双渠道；同时新增 Kimi K3、区域化人民币/美元计价与更完整的本地化，改善大型会话响应，并加固修复、授权、产物、遥测和发布链路。"
       },
       "surfaces": [
         "agent",
@@ -5911,25 +5911,25 @@
       "guides": [
         {
           "title": {
-            "en": "Reasonix User Guide",
+            "en": "Inx User Guide",
             "zh": "用户指南"
           },
           "body": {
-            "en": "Comprehensive guide for using Reasonix.",
-            "zh": "Reasonix 使用综合指南。"
+            "en": "Comprehensive guide for using Inx.",
+            "zh": "Inx 使用综合指南。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/ba2c4d31b7ad39cd635b153dc015f454ed14ee1a/docs/GUIDE.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/ba2c4d31b7ad39cd635b153dc015f454ed14ee1a/docs/GUIDE.md"
         },
         {
           "title": {
-            "en": "Reasonix User Guide (Chinese)",
+            "en": "Inx User Guide (Chinese)",
             "zh": "用户指南（中文）"
           },
           "body": {
-            "en": "Comprehensive guide for using Reasonix in Chinese.",
-            "zh": "Reasonix 使用综合指南（中文版）。"
+            "en": "Comprehensive guide for using Inx in Chinese.",
+            "zh": "Inx 使用综合指南（中文版）。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/ba2c4d31b7ad39cd635b153dc015f454ed14ee1a/docs/GUIDE.zh-CN.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/ba2c4d31b7ad39cd635b153dc015f454ed14ee1a/docs/GUIDE.zh-CN.md"
         },
         {
           "title": {
@@ -5937,10 +5937,10 @@
             "zh": "推理提供商配置"
           },
           "body": {
-            "en": "How to configure AI model providers in Reasonix.",
-            "zh": "如何在 Reasonix 中配置 AI 模型提供商。"
+            "en": "How to configure AI model providers in Inx.",
+            "zh": "如何在 Inx 中配置 AI 模型提供商。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/ba2c4d31b7ad39cd635b153dc015f454ed14ee1a/docs/REASONING_PROVIDERS.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/ba2c4d31b7ad39cd635b153dc015f454ed14ee1a/docs/REASONING_PROVIDERS.md"
         },
         {
           "title": {
@@ -5948,10 +5948,10 @@
             "zh": "发布流程"
           },
           "body": {
-            "en": "Details on Reasonix release channels and process.",
-            "zh": "Reasonix 发布渠道与流程详情。"
+            "en": "Details on Inx release channels and process.",
+            "zh": "Inx 发布渠道与流程详情。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/ba2c4d31b7ad39cd635b153dc015f454ed14ee1a/docs/RELEASING.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/ba2c4d31b7ad39cd635b153dc015f454ed14ee1a/docs/RELEASING.md"
         }
       ],
       "highlights": [
@@ -6195,8 +6195,8 @@
             "zh": "Guard 自动化必须绑定已审阅预览"
           },
           "body": {
-            "en": "Non-interactive reasonix-guard apply-plan --yes now requires the preview ID returned by the reviewed plan. Interactive use continues to bind it automatically.",
-            "zh": "非交互执行 reasonix-guard apply-plan --yes 现在必须携带已审阅计划返回的 preview ID；交互式使用仍会自动绑定。"
+            "en": "Non-interactive inx-guard apply-plan --yes now requires the preview ID returned by the reviewed plan. Interactive use continues to bind it automatically.",
+            "zh": "非交互执行 inx-guard apply-plan --yes 现在必须携带已审阅计划返回的 preview ID；交互式使用仍会自动绑定。"
           },
           "refs": [
             6973
@@ -6213,9 +6213,9 @@
         "xiaoshuai1024"
       ],
       "links": {
-        "github": "https://github.com/esengine/DeepSeek-Reasonix/releases/tag/desktop-v1.18.0",
-        "compare": "https://github.com/esengine/DeepSeek-Reasonix/compare/v1.17.21...desktop-v1.18.0",
-        "download": "https://reasonix.io/?download=desktop#start"
+        "github": "https://github.com/esengine/DeepSeek-Inx/releases/tag/desktop-v1.18.0",
+        "compare": "https://github.com/esengine/DeepSeek-Inx/compare/v1.17.21...desktop-v1.18.0",
+        "download": "https://inx.io/?download=desktop#start"
       }
     },
     {
@@ -6248,10 +6248,10 @@
             "zh": "用户指南"
           },
           "body": {
-            "en": "The official user guide for Reasonix Desktop.",
-            "zh": "Reasonix Desktop 的官方用户指南。"
+            "en": "The official user guide for Inx Desktop.",
+            "zh": "Inx Desktop 的官方用户指南。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/dcca564ec87e96632a65a8332455ee3f6c1370d7/docs/GUIDE.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/dcca564ec87e96632a65a8332455ee3f6c1370d7/docs/GUIDE.md"
         },
         {
           "title": {
@@ -6259,10 +6259,10 @@
             "zh": "用户指南（中文）"
           },
           "body": {
-            "en": "The Chinese user guide for Reasonix Desktop.",
-            "zh": "Reasonix Desktop 的中文用户指南。"
+            "en": "The Chinese user guide for Inx Desktop.",
+            "zh": "Inx Desktop 的中文用户指南。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/dcca564ec87e96632a65a8332455ee3f6c1370d7/docs/GUIDE.zh-CN.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/dcca564ec87e96632a65a8332455ee3f6c1370d7/docs/GUIDE.zh-CN.md"
         },
         {
           "title": {
@@ -6270,10 +6270,10 @@
             "zh": "规范"
           },
           "body": {
-            "en": "The Reasonix specification.",
-            "zh": "Reasonix 规范。"
+            "en": "The Inx specification.",
+            "zh": "Inx 规范。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/dcca564ec87e96632a65a8332455ee3f6c1370d7/docs/SPEC.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/dcca564ec87e96632a65a8332455ee3f6c1370d7/docs/SPEC.md"
         },
         {
           "title": {
@@ -6281,10 +6281,10 @@
             "zh": "规范（中文）"
           },
           "body": {
-            "en": "The Chinese Reasonix specification.",
-            "zh": "Reasonix 的中文规范。"
+            "en": "The Chinese Inx specification.",
+            "zh": "Inx 的中文规范。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/dcca564ec87e96632a65a8332455ee3f6c1370d7/docs/SPEC.zh-CN.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/dcca564ec87e96632a65a8332455ee3f6c1370d7/docs/SPEC.zh-CN.md"
         }
       ],
       "highlights": [
@@ -6709,9 +6709,9 @@
         "SivanCola"
       ],
       "links": {
-        "github": "https://github.com/esengine/DeepSeek-Reasonix/releases/tag/desktop-v1.17.21",
-        "compare": "https://github.com/esengine/DeepSeek-Reasonix/compare/v1.17.20...desktop-v1.17.21",
-        "download": "https://reasonix.io/?download=desktop#start"
+        "github": "https://github.com/esengine/DeepSeek-Inx/releases/tag/desktop-v1.17.21",
+        "compare": "https://github.com/esengine/DeepSeek-Inx/compare/v1.17.20...desktop-v1.17.21",
+        "download": "https://inx.io/?download=desktop#start"
       }
     },
     {
@@ -6741,10 +6741,10 @@
             "zh": "CLI 自动化接口"
           },
           "body": {
-            "en": "Use the documented session, task, hook, and event-stream contracts to integrate Reasonix without parsing terminal presentation.",
-            "zh": "使用文档化的会话、任务、Hook 和事件流契约集成 Reasonix，无需解析终端展示文本。"
+            "en": "Use the documented session, task, hook, and event-stream contracts to integrate Inx without parsing terminal presentation.",
+            "zh": "使用文档化的会话、任务、Hook 和事件流契约集成 Inx，无需解析终端展示文本。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/16d71aa4758765b6e7f86d8659e794bdd4a5b535/docs/CLI.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/16d71aa4758765b6e7f86d8659e794bdd4a5b535/docs/CLI.md"
         }
       ],
       "highlights": [
@@ -6966,8 +6966,8 @@
             "zh": "现有 Debian 安装需要一次性 bootstrap"
           },
           "body": {
-            "en": "Older .deb installs do not contain the new Polkit helper. Install the 1.17.20 .deb once with sudo apt install ./Reasonix-linux-amd64.deb; later in-app updates can use the authorized helper without uninstalling first.",
-            "zh": "旧版 .deb 尚未包含新的 Polkit helper。请先执行一次 sudo apt install ./Reasonix-linux-amd64.deb 安装 1.17.20；之后即可使用应用内授权更新，无需先卸载。"
+            "en": "Older .deb installs do not contain the new Polkit helper. Install the 1.17.20 .deb once with sudo apt install ./Inx-linux-amd64.deb; later in-app updates can use the authorized helper without uninstalling first.",
+            "zh": "旧版 .deb 尚未包含新的 Polkit helper。请先执行一次 sudo apt install ./Inx-linux-amd64.deb 安装 1.17.20；之后即可使用应用内授权更新，无需先卸载。"
           },
           "refs": [
             6866
@@ -7026,9 +7026,9 @@
         "par73e"
       ],
       "links": {
-        "github": "https://github.com/esengine/DeepSeek-Reasonix/releases/tag/desktop-v1.17.20",
-        "compare": "https://github.com/esengine/DeepSeek-Reasonix/compare/desktop-v1.17.19...desktop-v1.17.20",
-        "download": "https://reasonix.io/?download=desktop#start"
+        "github": "https://github.com/esengine/DeepSeek-Inx/releases/tag/desktop-v1.17.20",
+        "compare": "https://github.com/esengine/DeepSeek-Inx/compare/desktop-v1.17.19...desktop-v1.17.20",
+        "download": "https://inx.io/?download=desktop#start"
       }
     },
     {
@@ -7060,7 +7060,7 @@
             "en": "Review the updated Auto behavior and the decisions that still require explicit user input.",
             "zh": "了解更新后的 Auto 行为，以及仍需要用户明确选择的决策边界。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/b8f715b546ee1252530005ff1d7c3b157beed644/docs/TOOL_APPROVAL_MODES.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/b8f715b546ee1252530005ff1d7c3b157beed644/docs/TOOL_APPROVAL_MODES.md"
         }
       ],
       "highlights": [
@@ -7255,8 +7255,8 @@
               "zh": "Windows 便携包保留图形启动器"
             },
             "body": {
-              "en": "The bundled CLI now uses a distinct internal filename, preventing case-insensitive staging from replacing Reasonix.exe with the console executable.",
-              "zh": "内置 CLI 现在使用独立的内部文件名，避免不区分大小写的打包目录把 Reasonix.exe 图形启动器替换成控制台程序。"
+              "en": "The bundled CLI now uses a distinct internal filename, preventing case-insensitive staging from replacing Inx.exe with the console executable.",
+              "zh": "内置 CLI 现在使用独立的内部文件名，避免不区分大小写的打包目录把 Inx.exe 图形启动器替换成控制台程序。"
             },
             "refs": [
               6806
@@ -7303,9 +7303,9 @@
         "par73e"
       ],
       "links": {
-        "github": "https://github.com/esengine/DeepSeek-Reasonix/releases/tag/desktop-v1.17.19",
-        "compare": "https://github.com/esengine/DeepSeek-Reasonix/compare/desktop-v1.17.18...desktop-v1.17.19",
-        "download": "https://reasonix.io/?download=desktop#start"
+        "github": "https://github.com/esengine/DeepSeek-Inx/releases/tag/desktop-v1.17.19",
+        "compare": "https://github.com/esengine/DeepSeek-Inx/compare/desktop-v1.17.18...desktop-v1.17.19",
+        "download": "https://inx.io/?download=desktop#start"
       }
     },
     {
@@ -7337,7 +7337,7 @@
             "en": "Connect the desktop client to a Linux SSH host while keeping model access on the local machine.",
             "zh": "将桌面客户端连接到 Linux SSH 主机，同时让模型访问继续留在本机。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/03cc7749735116d5e3a56ff61a97cf84bbec6a5c/docs/REMOTE_WORKBENCH.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/03cc7749735116d5e3a56ff61a97cf84bbec6a5c/docs/REMOTE_WORKBENCH.md"
         },
         {
           "title": {
@@ -7348,7 +7348,7 @@
             "en": "Understand the approval choices used by local and remote workflows.",
             "zh": "了解本地与远程工作流使用的工具审批选项。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/03cc7749735116d5e3a56ff61a97cf84bbec6a5c/docs/TOOL_APPROVAL_MODES.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/03cc7749735116d5e3a56ff61a97cf84bbec6a5c/docs/TOOL_APPROVAL_MODES.md"
         }
       ],
       "highlights": [
@@ -7500,8 +7500,8 @@
               "zh": "VS Code 扩展安装入口"
             },
             "body": {
-              "en": "Project documentation and the website now expose direct installation paths for the Reasonix VS Code extension.",
-              "zh": "项目文档和官网现在提供 Reasonix VS Code 扩展的直接安装入口。"
+              "en": "Project documentation and the website now expose direct installation paths for the Inx VS Code extension.",
+              "zh": "项目文档和官网现在提供 Inx VS Code 扩展的直接安装入口。"
             },
             "refs": [
               6735
@@ -7558,9 +7558,9 @@
         "JesonChou"
       ],
       "links": {
-        "github": "https://github.com/esengine/DeepSeek-Reasonix/releases/tag/desktop-v1.17.18",
-        "compare": "https://github.com/esengine/DeepSeek-Reasonix/compare/desktop-v1.17.17...desktop-v1.17.18",
-        "download": "https://reasonix.io/?download=desktop#start"
+        "github": "https://github.com/esengine/DeepSeek-Inx/releases/tag/desktop-v1.17.18",
+        "compare": "https://github.com/esengine/DeepSeek-Inx/compare/desktop-v1.17.17...desktop-v1.17.18",
+        "download": "https://inx.io/?download=desktop#start"
       }
     },
     {
@@ -7568,8 +7568,8 @@
       "date": "2026-07-21",
       "channel": "stable",
       "title": {
-        "en": "Reasonix 1.17.17",
-        "zh": "Reasonix 1.17.17"
+        "en": "Inx 1.17.17",
+        "zh": "Inx 1.17.17"
       },
       "summary": {
         "en": "This release brings ACP mid-turn steering, workspace diffs in Changes, retirement of automatic Plan Mode, and various UI and lifecycle fixes.",
@@ -7592,7 +7592,7 @@
             "en": "Project overview and quick start.",
             "zh": "项目概述与快速入门。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/993cee10f24a1277f2c7d5802b2b27cd8bb7ce8e/README.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/993cee10f24a1277f2c7d5802b2b27cd8bb7ce8e/README.md"
         },
         {
           "title": {
@@ -7603,7 +7603,7 @@
             "en": "How to integrate with the Agent Client Protocol.",
             "zh": "如何与代理客户端协议集成。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/993cee10f24a1277f2c7d5802b2b27cd8bb7ce8e/docs/ACP.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/993cee10f24a1277f2c7d5802b2b27cd8bb7ce8e/docs/ACP.md"
         },
         {
           "title": {
@@ -7614,7 +7614,7 @@
             "en": "Guide to collaboration modes.",
             "zh": "协作模式指南。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/993cee10f24a1277f2c7d5802b2b27cd8bb7ce8e/docs/COLLABORATION_MODES.zh-CN.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/993cee10f24a1277f2c7d5802b2b27cd8bb7ce8e/docs/COLLABORATION_MODES.zh-CN.md"
         },
         {
           "title": {
@@ -7625,7 +7625,7 @@
             "en": "Details on configuration file locations.",
             "zh": "配置文件路径详情。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/993cee10f24a1277f2c7d5802b2b27cd8bb7ce8e/docs/CONFIG_PATHS.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/993cee10f24a1277f2c7d5802b2b27cd8bb7ce8e/docs/CONFIG_PATHS.md"
         },
         {
           "title": {
@@ -7636,7 +7636,7 @@
             "en": "Comprehensive usage guide.",
             "zh": "完整使用指南。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/993cee10f24a1277f2c7d5802b2b27cd8bb7ce8e/docs/GUIDE.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/993cee10f24a1277f2c7d5802b2b27cd8bb7ce8e/docs/GUIDE.md"
         },
         {
           "title": {
@@ -7647,7 +7647,7 @@
             "en": "Technical specification.",
             "zh": "技术规范。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/993cee10f24a1277f2c7d5802b2b27cd8bb7ce8e/docs/SPEC.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/993cee10f24a1277f2c7d5802b2b27cd8bb7ce8e/docs/SPEC.md"
         }
       ],
       "highlights": [
@@ -7658,8 +7658,8 @@
             "zh": "ACP 回合中引导"
           },
           "body": {
-            "en": "Clients can now steer active sessions using the `_reasonix.io/session/steer` vendor extension, with full capability negotiation.",
-            "zh": "客户端现在可使用 `_reasonix.io/session/steer` 供应商扩展在活动会话中引导，支持完整的能力协商。"
+            "en": "Clients can now steer active sessions using the `_inx.io/session/steer` vendor extension, with full capability negotiation.",
+            "zh": "客户端现在可使用 `_inx.io/session/steer` 供应商扩展在活动会话中引导，支持完整的能力协商。"
           },
           "refs": [
             6715
@@ -7716,8 +7716,8 @@
               "zh": "ACP 回合中引导"
             },
             "body": {
-              "en": "Support for the `_reasonix.io/session/steer` ACP vendor extension, allowing clients to guide active sessions.",
-              "zh": "支持 `_reasonix.io/session/steer` ACP 供应商扩展，允许客户端在活动会话中引导。"
+              "en": "Support for the `_inx.io/session/steer` ACP vendor extension, allowing clients to guide active sessions.",
+              "zh": "支持 `_inx.io/session/steer` ACP 供应商扩展，允许客户端在活动会话中引导。"
             },
             "refs": [
               6715
@@ -7807,12 +7807,12 @@
           },
           {
             "title": {
-              "en": "CC Switch MCP import respects enabled_reasonix",
-              "zh": "CC Switch MCP 导入遵循 enabled_reasonix"
+              "en": "CC Switch MCP import respects enabled_inx",
+              "zh": "CC Switch MCP 导入遵循 enabled_inx"
             },
             "body": {
-              "en": "MCP servers from CC Switch are now correctly imported using the `enabled_reasonix` flag, with compatible fallbacks for older schemas.",
-              "zh": "现在使用 `enabled_reasonix` 标志正确导入 CC Switch 的 MCP 服务器，并为旧架构提供兼容回退。"
+              "en": "MCP servers from CC Switch are now correctly imported using the `enabled_inx` flag, with compatible fallbacks for older schemas.",
+              "zh": "现在使用 `enabled_inx` 标志正确导入 CC Switch 的 MCP 服务器，并为旧架构提供兼容回退。"
             },
             "refs": [
               6730
@@ -7885,9 +7885,9 @@
         "gcoder1991"
       ],
       "links": {
-        "github": "https://github.com/esengine/DeepSeek-Reasonix/releases/tag/desktop-v1.17.17",
-        "compare": "https://github.com/esengine/DeepSeek-Reasonix/compare/desktop-v1.17.16...desktop-v1.17.17",
-        "download": "https://reasonix.io/?download=desktop#start"
+        "github": "https://github.com/esengine/DeepSeek-Inx/releases/tag/desktop-v1.17.17",
+        "compare": "https://github.com/esengine/DeepSeek-Inx/compare/desktop-v1.17.16...desktop-v1.17.17",
+        "download": "https://inx.io/?download=desktop#start"
       }
     },
     {
@@ -7895,8 +7895,8 @@
       "date": "2026-07-20",
       "channel": "stable",
       "title": {
-        "en": "Reasonix 1.17.16",
-        "zh": "Reasonix 1.17.16"
+        "en": "Inx 1.17.16",
+        "zh": "Inx 1.17.16"
       },
       "summary": {
         "en": "Remote SSH and parallel subagent fleets lead this release, alongside regional typography, customizable composer shortcuts, reliable exports, and stronger session and MCP recovery.",
@@ -7921,7 +7921,7 @@
             "en": "Configure hosts, connect from the CLI or Desktop, browse remote files, and manage forwarded ports.",
             "zh": "配置远程主机，通过 CLI 或 Desktop 连接、浏览远程文件并管理端口转发。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/43993f5a10cd4afa46febf53ed9f7ab2a1ceab5b/docs/GUIDE.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/43993f5a10cd4afa46febf53ed9f7ab2a1ceab5b/docs/GUIDE.md"
         },
         {
           "title": {
@@ -7932,7 +7932,7 @@
             "en": "Chinese guide for Remote SSH host setup, connections, files, and port forwarding.",
             "zh": "远程 SSH 主机配置、连接、文件浏览与端口转发的中文指南。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/43993f5a10cd4afa46febf53ed9f7ab2a1ceab5b/docs/GUIDE.zh-CN.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/43993f5a10cd4afa46febf53ed9f7ab2a1ceab5b/docs/GUIDE.zh-CN.md"
         },
         {
           "title": {
@@ -7943,7 +7943,7 @@
             "en": "Learn how to define and use subagent profiles, configure fleets, and manage concurrency.",
             "zh": "了解如何定义和使用子智能体配置文件、配置舰队并管理并发。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/43993f5a10cd4afa46febf53ed9f7ab2a1ceab5b/docs/SUBAGENT_PROFILES.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/43993f5a10cd4afa46febf53ed9f7ab2a1ceab5b/docs/SUBAGENT_PROFILES.md"
         },
         {
           "title": {
@@ -7954,7 +7954,7 @@
             "en": "Customize pane opacity and explore theme pack authoring.",
             "zh": "自定义面板透明度并探索主题包制作。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/43993f5a10cd4afa46febf53ed9f7ab2a1ceab5b/docs/THEME_PACK.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/43993f5a10cd4afa46febf53ed9f7ab2a1ceab5b/docs/THEME_PACK.md"
         },
         {
           "title": {
@@ -7965,7 +7965,7 @@
             "en": "See the latest CLI features, including middle-click paste and improved transcript layout.",
             "zh": "查看最新的 CLI 功能，包括中键粘贴和改进的消息布局。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/43993f5a10cd4afa46febf53ed9f7ab2a1ceab5b/docs/CLI.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/43993f5a10cd4afa46febf53ed9f7ab2a1ceab5b/docs/CLI.md"
         }
       ],
       "highlights": [
@@ -7976,8 +7976,8 @@
             "zh": "远程 SSH"
           },
           "body": {
-            "en": "Connect to a remote host over SSH and run the full Reasonix agent and tools remotely. Includes host manager, file browser, port forwarding, and automatic reconnection.",
-            "zh": "通过 SSH 连接到远程主机并远程运行完整的 Reasonix 智能体与工具。包含主机管理、文件浏览、端口转发和自动重连。"
+            "en": "Connect to a remote host over SSH and run the full Inx agent and tools remotely. Includes host manager, file browser, port forwarding, and automatic reconnection.",
+            "zh": "通过 SSH 连接到远程主机并远程运行完整的 Inx 智能体与工具。包含主机管理、文件浏览、端口转发和自动重连。"
           },
           "refs": [
             6673
@@ -8100,8 +8100,8 @@
               "zh": "CLI 中键粘贴"
             },
             "body": {
-              "en": "Restore middle-click paste in the Reasonix CLI (tmux buffer or PRIMARY selection).",
-              "zh": "在 Reasonix CLI 中恢复中键粘贴功能（tmux 缓冲区或 PRIMARY 选择区）。"
+              "en": "Restore middle-click paste in the Inx CLI (tmux buffer or PRIMARY selection).",
+              "zh": "在 Inx CLI 中恢复中键粘贴功能（tmux 缓冲区或 PRIMARY 选择区）。"
             },
             "refs": [
               6589
@@ -8416,9 +8416,9 @@
         "ikelvingo"
       ],
       "links": {
-        "github": "https://github.com/esengine/DeepSeek-Reasonix/releases/tag/desktop-v1.17.16",
-        "compare": "https://github.com/esengine/DeepSeek-Reasonix/compare/desktop-v1.17.15...desktop-v1.17.16",
-        "download": "https://reasonix.io/?download=desktop#start"
+        "github": "https://github.com/esengine/DeepSeek-Inx/releases/tag/desktop-v1.17.16",
+        "compare": "https://github.com/esengine/DeepSeek-Inx/compare/desktop-v1.17.15...desktop-v1.17.16",
+        "download": "https://inx.io/?download=desktop#start"
       }
     },
     {
@@ -8426,8 +8426,8 @@
       "date": "2026-07-18",
       "channel": "stable",
       "title": {
-        "en": "Reasonix 1.17.15",
-        "zh": "Reasonix 1.17.15"
+        "en": "Inx 1.17.15",
+        "zh": "Inx 1.17.15"
       },
       "summary": {
         "en": "This release adds the new official Desktop theme experience, makes long-running chats and session switching more reliable, restores persistent MCP sessions, and polishes the CLI workflow.",
@@ -8450,7 +8450,7 @@
             "en": "Create, validate, import, export, and share Theme Pack V2 themes.",
             "zh": "创建、校验、导入、导出和分享 Theme Pack V2 主题。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/8a36da8db87fc688d854f59b6897268995190bf7/docs/THEME_PACK.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/8a36da8db87fc688d854f59b6897268995190bf7/docs/THEME_PACK.md"
         },
         {
           "title": {
@@ -8461,7 +8461,7 @@
             "en": "Chinese guide for creating and distributing Theme Pack V2 themes.",
             "zh": "中文指南：创建和分发 Theme Pack V2 主题。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/8a36da8db87fc688d854f59b6897268995190bf7/docs/THEME_PACK.zh-CN.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/8a36da8db87fc688d854f59b6897268995190bf7/docs/THEME_PACK.zh-CN.md"
         },
         {
           "title": {
@@ -8472,7 +8472,7 @@
             "en": "Reference for the composer, clipboard shortcuts, model picker, and responsive status footer.",
             "zh": "输入区、剪贴板快捷键、模型选择器和响应式状态栏参考。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/8a36da8db87fc688d854f59b6897268995190bf7/docs/CLI.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/8a36da8db87fc688d854f59b6897268995190bf7/docs/CLI.md"
         },
         {
           "title": {
@@ -8483,7 +8483,7 @@
             "en": "Chinese reference for the updated CLI workflow.",
             "zh": "更新后 CLI 工作流的中文参考。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/8a36da8db87fc688d854f59b6897268995190bf7/docs/CLI.zh-CN.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/8a36da8db87fc688d854f59b6897268995190bf7/docs/CLI.zh-CN.md"
         }
       ],
       "highlights": [
@@ -8582,8 +8582,8 @@
               "zh": "官网深色模式"
             },
             "body": {
-              "en": "reasonix.io now supports system, light, and dark themes, uses the prefix-cache block as a shared visual motif, and presents frequent patch releases in a compact changelog layout.",
-              "zh": "reasonix.io 现支持跟随系统、浅色和深色主题，以前缀缓存方块统一视觉母题，并用更紧凑的更新日志展示高频补丁版本。"
+              "en": "inx.io now supports system, light, and dark themes, uses the prefix-cache block as a shared visual motif, and presents frequent patch releases in a compact changelog layout.",
+              "zh": "inx.io 现支持跟随系统、浅色和深色主题，以前缀缓存方块统一视觉母题，并用更紧凑的更新日志展示高频补丁版本。"
             },
             "refs": [
               6627
@@ -8736,8 +8736,8 @@
             "zh": "分享会话前请主动脱敏"
           },
           "body": {
-            "en": "Ordinary model and tool content is now stored verbatim in private local files. If a tool prints a real credential, run reasonix doctor redact-sessions or review the files before sharing them.",
-            "zh": "普通模型与工具内容现在会原样写入私有本地文件。如果工具输出了真实凭据，分享前请运行 reasonix doctor redact-sessions 或人工检查相关文件。"
+            "en": "Ordinary model and tool content is now stored verbatim in private local files. If a tool prints a real credential, run inx doctor redact-sessions or review the files before sharing them.",
+            "zh": "普通模型与工具内容现在会原样写入私有本地文件。如果工具输出了真实凭据，分享前请运行 inx doctor redact-sessions 或人工检查相关文件。"
           },
           "refs": [
             6583
@@ -8763,9 +8763,9 @@
         "xianyu-sheng"
       ],
       "links": {
-        "github": "https://github.com/esengine/DeepSeek-Reasonix/releases/tag/desktop-v1.17.15",
-        "compare": "https://github.com/esengine/DeepSeek-Reasonix/compare/desktop-v1.17.14...desktop-v1.17.15",
-        "download": "https://reasonix.io/?download=desktop#start"
+        "github": "https://github.com/esengine/DeepSeek-Inx/releases/tag/desktop-v1.17.15",
+        "compare": "https://github.com/esengine/DeepSeek-Inx/compare/desktop-v1.17.14...desktop-v1.17.15",
+        "download": "https://inx.io/?download=desktop#start"
       }
     },
     {
@@ -8773,8 +8773,8 @@
       "date": "2026-07-16",
       "channel": "stable",
       "title": {
-        "en": "Reasonix 1.17.14",
-        "zh": "Reasonix 1.17.14"
+        "en": "Inx 1.17.14",
+        "zh": "Inx 1.17.14"
       },
       "summary": {
         "en": "This release improves the desktop experience with clearer MCP error messages, Windows plugin hook fixes, executable icons, and a new bilingual changelog.",
@@ -8790,10 +8790,10 @@
             "zh": "桌面 Hook"
           },
           "body": {
-            "en": "Guide for creating and using hooks in Reasonix Desktop.",
-            "zh": "在 Reasonix 桌面端中创建和使用 Hook 的指南。"
+            "en": "Guide for creating and using hooks in Inx Desktop.",
+            "zh": "在 Inx 桌面端中创建和使用 Hook 的指南。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/cc9b1f52e6bc787719b78e70db8d7e487fe2fdd1/docs/DESKTOP_HOOKS.zh-CN.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/cc9b1f52e6bc787719b78e70db8d7e487fe2fdd1/docs/DESKTOP_HOOKS.zh-CN.md"
         },
         {
           "title": {
@@ -8801,10 +8801,10 @@
             "zh": "插件包"
           },
           "body": {
-            "en": "How to create, configure, and distribute Reasonix plugins.",
-            "zh": "如何创建、配置和分发 Reasonix 插件。"
+            "en": "How to create, configure, and distribute Inx plugins.",
+            "zh": "如何创建、配置和分发 Inx 插件。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/cc9b1f52e6bc787719b78e70db8d7e487fe2fdd1/docs/PLUGIN_PACKAGES.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/cc9b1f52e6bc787719b78e70db8d7e487fe2fdd1/docs/PLUGIN_PACKAGES.md"
         },
         {
           "title": {
@@ -8812,10 +8812,10 @@
             "zh": "插件包（中文）"
           },
           "body": {
-            "en": "Chinese guide for creating, configuring, and distributing Reasonix plugins.",
-            "zh": "中文指南：创建、配置和分发 Reasonix 插件。"
+            "en": "Chinese guide for creating, configuring, and distributing Inx plugins.",
+            "zh": "中文指南：创建、配置和分发 Inx 插件。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/cc9b1f52e6bc787719b78e70db8d7e487fe2fdd1/docs/PLUGIN_PACKAGES.zh-CN.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/cc9b1f52e6bc787719b78e70db8d7e487fe2fdd1/docs/PLUGIN_PACKAGES.zh-CN.md"
         },
         {
           "title": {
@@ -8823,10 +8823,10 @@
             "zh": "发布流程"
           },
           "body": {
-            "en": "How to build, validate, and publish a Reasonix release.",
-            "zh": "如何构建、验证和发布 Reasonix 版本。"
+            "en": "How to build, validate, and publish a Inx release.",
+            "zh": "如何构建、验证和发布 Inx 版本。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/cc9b1f52e6bc787719b78e70db8d7e487fe2fdd1/docs/RELEASING.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/cc9b1f52e6bc787719b78e70db8d7e487fe2fdd1/docs/RELEASING.md"
         }
       ],
       "highlights": [
@@ -8865,8 +8865,8 @@
             "zh": "Windows 插件 Hook 兼容性"
           },
           "body": {
-            "en": "Plugin hooks on Windows now correctly expand aliases like ${REASONIX_PLUGIN_ROOT}, support bash hooks, and handle non-UTF-8 output.",
-            "zh": "Windows 插件 Hook 现在能正确展开 ${REASONIX_PLUGIN_ROOT} 等别名，支持 bash Hook，并能处理非 UTF-8 输出。"
+            "en": "Plugin hooks on Windows now correctly expand aliases like ${INX_PLUGIN_ROOT}, support bash hooks, and handle non-UTF-8 output.",
+            "zh": "Windows 插件 Hook 现在能正确展开 ${INX_PLUGIN_ROOT} 等别名，支持 bash Hook，并能处理非 UTF-8 输出。"
           },
           "refs": [
             6550
@@ -8879,8 +8879,8 @@
             "zh": "Windows 可执行程序图标"
           },
           "body": {
-            "en": "Windows launcher, guard, and updater now display the Reasonix icon and include version metadata.",
-            "zh": "Windows 启动器、守护程序和更新程序现在显示 Reasonix 图标，并包含版本元数据。"
+            "en": "Windows launcher, guard, and updater now display the Inx icon and include version metadata.",
+            "zh": "Windows 启动器、守护程序和更新程序现在显示 Inx 图标，并包含版本元数据。"
           },
           "refs": [
             6549
@@ -8924,8 +8924,8 @@
               "zh": "Windows 可执行程序图标"
             },
             "body": {
-              "en": "Launcher, guard, and update helper now have the Reasonix icon and version metadata.",
-              "zh": "启动器、守护程序和更新助手现具有 Reasonix 图标及版本元数据。"
+              "en": "Launcher, guard, and update helper now have the Inx icon and version metadata.",
+              "zh": "启动器、守护程序和更新助手现具有 Inx 图标及版本元数据。"
             },
             "refs": [
               6549
@@ -8980,9 +8980,9 @@
         "SivanCola"
       ],
       "links": {
-        "github": "https://github.com/esengine/DeepSeek-Reasonix/releases/tag/desktop-v1.17.14",
-        "compare": "https://github.com/esengine/DeepSeek-Reasonix/compare/v1.17.13...desktop-v1.17.14",
-        "download": "https://reasonix.io/?download=desktop#start"
+        "github": "https://github.com/esengine/DeepSeek-Inx/releases/tag/desktop-v1.17.14",
+        "compare": "https://github.com/esengine/DeepSeek-Inx/compare/v1.17.13...desktop-v1.17.14",
+        "download": "https://inx.io/?download=desktop#start"
       }
     },
     {
@@ -9011,10 +9011,10 @@
             "zh": "恢复损坏的安装"
           },
           "body": {
-            "en": "Use reasonix-guard to diagnose configuration and installation failures, restore a snapshot, or start in Safe Mode.",
-            "zh": "使用 reasonix-guard 诊断配置与安装故障、恢复快照，或进入安全模式。"
+            "en": "Use inx-guard to diagnose configuration and installation failures, restore a snapshot, or start in Safe Mode.",
+            "zh": "使用 inx-guard 诊断配置与安装故障、恢复快照，或进入安全模式。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/main-v2/docs/RECOVERY.zh-CN.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/main-v2/docs/RECOVERY.zh-CN.md"
         },
         {
           "title": {
@@ -9025,7 +9025,7 @@
             "en": "Learn how plugin packages bundle skills, hooks, and MCP servers while preserving explicit trust boundaries.",
             "zh": "了解插件包如何组合技能、Hooks 与 MCP 服务器，同时维持清晰的可信边界。"
           },
-          "href": "https://github.com/esengine/DeepSeek-Reasonix/blob/main-v2/docs/PLUGIN_PACKAGES.zh-CN.md"
+          "href": "https://github.com/esengine/DeepSeek-Inx/blob/main-v2/docs/PLUGIN_PACKAGES.zh-CN.md"
         }
       ],
       "highlights": [
@@ -9082,8 +9082,8 @@
             "zh": "Claude 插件兼容"
           },
           "body": {
-            "en": "Reasonix can consume Claude-compatible plugin packages and adapt their commands and hooks into the existing plugin runtime.",
-            "zh": "Reasonix 现在可以加载 Claude 兼容插件包，并把其中的命令与 Hooks 接入现有插件运行时。"
+            "en": "Inx can consume Claude-compatible plugin packages and adapt their commands and hooks into the existing plugin runtime.",
+            "zh": "Inx 现在可以加载 Claude 兼容插件包，并把其中的命令与 Hooks 接入现有插件运行时。"
           },
           "refs": [
             6434
@@ -9217,8 +9217,8 @@
             "zh": "Windows 原生沙箱后端已退役"
           },
           "body": {
-            "en": "If you previously selected the retired native Windows sandbox, open Settings → Sandbox after upgrading and choose a supported isolation mode. Reasonix reports a remediation message instead of silently falling back.",
-            "zh": "如果此前选择了已退役的 Windows 原生沙箱，升级后请打开“设置 → 沙箱”并选择受支持的隔离方式。Reasonix 会显示修复提示，不会静默降级。"
+            "en": "If you previously selected the retired native Windows sandbox, open Settings → Sandbox after upgrading and choose a supported isolation mode. Inx reports a remediation message instead of silently falling back.",
+            "zh": "如果此前选择了已退役的 Windows 原生沙箱，升级后请打开“设置 → 沙箱”并选择受支持的隔离方式。Inx 会显示修复提示，不会静默降级。"
           },
           "refs": [
             6516
@@ -9231,8 +9231,8 @@
             "zh": "MCP 信任可能需要重新确认"
           },
           "body": {
-            "en": "When a package identity or executable no longer matches its stored receipt, Reasonix asks for a new approval rather than reusing stale trust.",
-            "zh": "当插件包身份或可执行文件与已保存回执不一致时，Reasonix 会请求新的审批，而不会沿用过期信任。"
+            "en": "When a package identity or executable no longer matches its stored receipt, Inx asks for a new approval rather than reusing stale trust.",
+            "zh": "当插件包身份或可执行文件与已保存回执不一致时，Inx 会请求新的审批，而不会沿用过期信任。"
           },
           "refs": [
             6482
@@ -9266,9 +9266,9 @@
         "esengine"
       ],
       "links": {
-        "github": "https://github.com/esengine/DeepSeek-Reasonix/releases/tag/desktop-v1.17.13",
-        "compare": "https://github.com/esengine/DeepSeek-Reasonix/compare/desktop-v1.17.12...desktop-v1.17.13",
-        "download": "https://reasonix.io/?download=desktop#start"
+        "github": "https://github.com/esengine/DeepSeek-Inx/releases/tag/desktop-v1.17.13",
+        "compare": "https://github.com/esengine/DeepSeek-Inx/compare/desktop-v1.17.12...desktop-v1.17.13",
+        "download": "https://inx.io/?download=desktop#start"
       }
     },
     {
@@ -9294,8 +9294,8 @@
         {
           "kind": "new",
           "title": {
-            "en": "Provider manager in reasonix setup",
-            "zh": "reasonix setup 变成 Provider 管理器"
+            "en": "Provider manager in inx setup",
+            "zh": "inx setup 变成 Provider 管理器"
           },
           "body": {
             "en": "Add, edit, test, and choose provider access from one terminal workflow instead of rerunning a first-use wizard.",
@@ -9403,9 +9403,9 @@
         "J3y0r"
       ],
       "links": {
-        "github": "https://github.com/esengine/DeepSeek-Reasonix/releases/tag/desktop-v1.17.12",
-        "compare": "https://github.com/esengine/DeepSeek-Reasonix/compare/desktop-v1.17.11...desktop-v1.17.12",
-        "download": "https://reasonix.io/?download=desktop#start"
+        "github": "https://github.com/esengine/DeepSeek-Inx/releases/tag/desktop-v1.17.12",
+        "compare": "https://github.com/esengine/DeepSeek-Inx/compare/desktop-v1.17.11...desktop-v1.17.12",
+        "download": "https://inx.io/?download=desktop#start"
       }
     },
     {
@@ -9417,8 +9417,8 @@
         "zh": "运行档、插件命令与更安全的会话交接"
       },
       "summary": {
-        "en": "This release introduces configurable subagent and runtime profiles, maps Claude plugin commands into Reasonix, and closes several session handoff gaps that could hide messages, drop turns, or obscure provider failures.",
-        "zh": "这一版新增可配置子智能体与运行档，把 Claude 插件命令接入 Reasonix，并修复多个会话交接缺口，避免消息隐藏、回合丢失或 Provider 错误被掩盖。"
+        "en": "This release introduces configurable subagent and runtime profiles, maps Claude plugin commands into Inx, and closes several session handoff gaps that could hide messages, drop turns, or obscure provider failures.",
+        "zh": "这一版新增可配置子智能体与运行档，把 Claude 插件命令接入 Inx，并修复多个会话交接缺口，避免消息隐藏、回合丢失或 Provider 错误被掩盖。"
       },
       "surfaces": [
         "agent",
@@ -9540,9 +9540,9 @@
         "SivanCola"
       ],
       "links": {
-        "github": "https://github.com/esengine/DeepSeek-Reasonix/releases/tag/desktop-v1.17.11",
-        "compare": "https://github.com/esengine/DeepSeek-Reasonix/compare/desktop-v1.17.10...desktop-v1.17.11",
-        "download": "https://reasonix.io/?download=desktop#start"
+        "github": "https://github.com/esengine/DeepSeek-Inx/releases/tag/desktop-v1.17.11",
+        "compare": "https://github.com/esengine/DeepSeek-Inx/compare/desktop-v1.17.10...desktop-v1.17.11",
+        "download": "https://inx.io/?download=desktop#start"
       }
     }
   ]

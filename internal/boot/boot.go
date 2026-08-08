@@ -17,10 +17,13 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
+	"inx/internal/ablation"
 	"inx/internal/agent"
 	"inx/internal/capability"
 	"inx/internal/command"
@@ -28,6 +31,13 @@ import (
 	"inx/internal/control"
 	"inx/internal/environment"
 	"inx/internal/event"
+	"inx/internal/extension"
+	"inx/internal/extension/dispatch"
+	"inx/internal/extension/protocol"
+	"inx/internal/extension/providerext"
+	"inx/internal/extension/sidecar"
+	"inx/internal/extension/uihub"
+	"inx/internal/goaleval"
 	"inx/internal/guardian"
 	"inx/internal/history"
 	"inx/internal/hook"
@@ -42,11 +52,14 @@ import (
 	"inx/internal/outputstyle"
 	"inx/internal/permission"
 	"inx/internal/plugin"
+	"inx/internal/productdocs"
 	"inx/internal/provider"
 	"inx/internal/recovery"
 	"inx/internal/sandbox"
 	"inx/internal/secrets"
+	"inx/internal/sessiontemp"
 	"inx/internal/skill"
+	"inx/internal/stats"
 	"inx/internal/tool"
 	"inx/internal/tool/builtin"
 	"inx/internal/tool/sessiontool"
@@ -112,6 +125,9 @@ type Options struct {
 	// applied to the in-memory config only and never turns Auto into a persisted
 	// CNY/USD choice.
 	AutoPricingCurrency string
+	// StatsSource labels this frontend's usage records (desktop/cli/serve).
+	// Empty disables usage recording for this controller.
+	StatsSource string
 	// ExtraPlugins are session-scoped MCP servers supplied by a host transport
 	// (for example ACP session/new). They are connected eagerly for this
 	// controller but are not persisted to inx.toml.
@@ -151,6 +167,10 @@ type Options struct {
 	// local UI metadata to automatic transcript recovery branches.
 	SessionRecoveryMeta func(control.SessionRecoveryRequest) agent.BranchMeta
 	OnSessionRecovered  func(control.SessionRecoveryInfo) error
+	// SubagentParentLive reports whether this process currently owns or is
+	// building the parent session. Desktop uses it to avoid probing a live tab's
+	// lease during stale-subagent cleanup. Nil preserves lease-only cleanup.
+	SubagentParentLive func(sessionPath string) bool
 	// FileOverlay and TerminalRunner let a host transport (ACP) serve file
 	// content from editor buffers and run foreground bash in a host terminal.
 	// Both only change where tool I/O happens — tool names, descriptions, and
@@ -158,29 +178,37 @@ type Options struct {
 	FileOverlay    builtin.FileOverlay
 	TerminalRunner builtin.TerminalRunner
 	// ProviderResolver routes every model role through a caller-owned provider
-	// catalog. Remote Workbench injects a Broker resolver so no credential or
-	// provider endpoint has to exist on the Host. Nil preserves local behavior.
+	// catalog. Nil preserves local behavior.
 	ProviderResolver provider.Resolver
-	// DisablePlanner is a process-local hard override used by supervised ACP
-	// workers. It wins over user/project planner_model configuration without
-	// mutating config or changing the provider-visible prompt/tool surface.
-	DisablePlanner bool
+	// Ablation switches subsystems off for a benchmark arm, and is also the
+	// process-local hard override supervised ACP workers use to force the planner
+	// off. It wins over user/project configuration without mutating config or
+	// changing the provider-visible prompt/tool surface. The zero value runs
+	// everything.
+	Ablation ablation.Set
 	// SandboxNetworkOverride and WorkspaceOnly are process-local hard bounds for
 	// supervised ACP workers. Nil/false preserve normal Inx config.
 	SandboxNetworkOverride *bool
 	SandboxBashOverride    string
 	WorkspaceOnly          bool
+	// SessionTemp is the logical-session private temporary directory manager.
+	// Rebuild passes the previous Controller's Manager so hot rebuilds keep
+	// temporary files. Empty creates a fresh Manager inside control.New.
+	// Frontends that build a replacement Controller without Rebuild must pass
+	// the same Manager for the same logical session.
+	SessionTemp *sessiontemp.Manager
 }
 
 func recoveryHeadlessMode(opts Options) bool {
 	return strings.TrimSpace(opts.HeadlessApprovalMode) != ""
 }
 
-// Build loads config, resolves the model(s), and returns a Controller wrapping a
-// single Agent, or a two-model Coordinator when agent.planner_model is set. The
-// returned controller owns plugin subprocesses; call Close (via Controller.Close)
-// to release them.
-func Build(ctx context.Context, opts Options) (*control.Controller, error) {
+// build is the assembly body behind BuildRuntime (and the Build compat
+// wrapper): it loads config, resolves the model(s), wires the full runtime,
+// and freezes the extension kernel snapshot from the objects it just
+// assembled. The returned controller owns plugin subprocesses; call Close
+// (via Controller.Close) to release them.
+func build(ctx context.Context, opts Options) (*BuildResult, error) {
 	stderr := opts.Stderr
 	if stderr == nil {
 		stderr = os.Stderr
@@ -209,6 +237,140 @@ func Build(ctx context.Context, opts Options) (*control.Controller, error) {
 	secrets.SetFilterSubprocessEnv(cfg.Secrets.FilterSubprocessEnv)
 	secrets.SetProtectSensitiveFiles(cfg.Secrets.ProtectSensitiveFiles)
 	secrets.RegisterCredentialEnvKeys(cfg.CredentialEnvNames())
+
+	// Serialize the frontend's sink once: background jobs (below) emit from their
+	// own goroutines, which can overlap a running turn's emission, so every emitter
+	// shares this synchronized sink. It is created before extension preflight so
+	// sidecar warnings and host/ui/* publishes land on the same channel as every
+	// later notice. The job manager is session-scoped — its jobs outlive a turn
+	// and are cancelled by Controller.Close.
+	sink := event.Sync(opts.Sink)
+
+	// Both sink wraps must complete BEFORE the extension UI hub closes over the
+	// sink variable: a sidecar publish during preflight lands on this closure
+	// from a wire-handler goroutine, and any later reassignment races it.
+	// Record billable usage for the "usage statistics" panel. Wrapping here —
+	// outside the per-agent sinks — covers every agent (executor, planner,
+	// sub-agents, guardian) with one recorder, and each record is labelled with
+	// this frontend's StatsSource so the panel can split totals by entry point.
+	if source := strings.TrimSpace(opts.StatsSource); source != "" {
+		sink = stats.NewRecorder(sink, config.StatsDir(), source)
+	}
+	// Goal token-budget accounting: the controller detects this tee and
+	// attributes billable usage to the active goal turn's recorder. Both the
+	// tee and the delta coalescer must ride the shared sink agents emit into
+	// directly — wrapping only the controller's reference would leave the
+	// executor's per-chunk Text/Reasoning stream uncoalesced.
+	sink = control.NewGoalUsageTee(event.Coalesce(sink, event.DefaultStreamDeltaWindow))
+
+	// Extension preflight (stages 5b/7): start the installed, enabled v1 runtime
+	// packages ONCE, here, before model resolution, so plugin-namespaced refs
+	// (plugin/<plugin>/<provider>/<model>) resolve on the very first boot and the
+	// same sidecar generation feeds the executor, planner, guardian, sub-agents,
+	// the snapshot assembly, and the frontend catalog. With no runtime package
+	// installed preflight is a no-op and the whole build below takes the
+	// untouched pre-sidecar path. The generation moves up with it: the sidecar
+	// handshake's session context carries this build's generation, and a fresh
+	// controller has no session path yet, so the session ID is generation-scoped
+	// (the handshake only requires a stable, non-empty identity).
+	generation := nextRuntimeGeneration()
+	sessionID := fmt.Sprintf("boot-%d", generation)
+	proxySpec := cfg.NetworkProxySpec()
+	extWarn := func(msg string) {
+		redacted := secrets.RedactCredentials(msg)
+		slog.Warn("boot: extension runtime: "+redacted, "root", root)
+		sink.Emit(event.Event{Kind: event.Notice, Level: event.LevelWarn, Text: redacted})
+	}
+	// Stage 8a: the host extension UI hub serves every sidecar's host/ui/* calls
+	// for this generation — publications become frontend events through the
+	// controller sink, blocking prompts ride the controller's Ask channel. The
+	// controller only exists after control.New below, so both seams indirect
+	// through ctrlRef; traffic before that (a sidecar publishing during its
+	// handshake) falls back to the same sink directly, matching the emission the
+	// controller would have made.
+	var ctrlRef atomic.Pointer[control.Controller]
+	// Readiness signals for gateExtensionUIRequest: a sidecar may legally
+	// issue host/ui/request right after extension/initialized, before the
+	// controller exists. ready closes at ctrlRef.Store; failed closes on any
+	// build error before the RuntimeSet takes ownership (the pendingMgr defer
+	// below), so a startup request never hangs a dying build.
+	controllerReady := make(chan struct{})
+	controllerBuildFailed := make(chan struct{})
+	extUIHub := uihub.New(uihub.Options{
+		SessionID:  sessionID,
+		Generation: generation,
+		Emit: func(ev event.Event) {
+			if c := ctrlRef.Load(); c != nil {
+				c.EmitExtensionEvent(ev)
+				return
+			}
+			sink.Emit(ev)
+		},
+		Request: func(reqCtx context.Context, req uihub.HubRequest) (map[string]any, bool, error) {
+			return gateExtensionUIRequest(reqCtx, ctrlRef.Load, controllerReady, controllerBuildFailed,
+				func(c *control.Controller) (map[string]any, bool, error) {
+					return uihub.AskRequestFunc(c.Ask)(reqCtx, req)
+				})
+		},
+		Warn: func(msg string) {
+			slog.Warn("boot: extension UI hub: "+msg, "root", root)
+		},
+	})
+	extensionMgr, err := preflightExtensionRuntimes(ctx, config.InxHomeDir(), extensionBoot{
+		session:   protocol.SessionContext{SessionID: sessionID, WorkspaceRoot: root, Generation: generation},
+		ui:        extUIHub,
+		onWarning: extWarn,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("boot: %w", err)
+	}
+	// Until the RuntimeSet takes ownership at snapshot assembly, every error
+	// path between here and there must retire the preflighted sidecars — no
+	// process may outlive a failed build.
+	pendingMgr := extensionMgr
+	defer func() {
+		if pendingMgr != nil {
+			close(controllerBuildFailed)
+			_ = pendingMgr.Close()
+		}
+	}()
+
+	// The build's provider resolution base: the caller-owned broker when
+	// injected, the local config-backed resolver otherwise. When a started
+	// sidecar declares providers, fold them in NOW (stage 7) with the
+	// provider:<ref> slot claims from the same manifest data the kernel's
+	// ReplaceClaims pass uses, so first-boot model resolution sees them. A
+	// conflict with the base catalog that lacks the plugin's claim is fatal,
+	// the same class as a required runtime that cannot start: booting without
+	// the declared provider would silently change what the session is.
+	baseResolver := opts.ProviderResolver
+	if baseResolver == nil {
+		baseResolver = NewLocalProviderResolver(cfg, proxySpec)
+	}
+	effectiveResolver := opts.ProviderResolver
+	var extensionResolver provider.Resolver
+	if extensionMgr != nil {
+		declares := false
+		for _, client := range extensionMgr.Clients() {
+			if len(client.Handshake().Providers) > 0 {
+				declares = true
+				break
+			}
+		}
+		if declares {
+			claims, claimsErr := resolveReplacementClaims(extensionMgr.Contributions())
+			if claimsErr != nil {
+				return nil, fmt.Errorf("boot: %w", claimsErr)
+			}
+			merged, mergeErr := mergeSidecarProviders(baseResolver, extensionMgr, claims)
+			if mergeErr != nil {
+				return nil, fmt.Errorf("boot: %w", mergeErr)
+			}
+			effectiveResolver = merged
+			extensionResolver = merged
+		}
+	}
+
 	// Fall through a keyless default_model to the next configured chat model
 	// instead of hard-failing every command on "missing env X_API_KEY" (issue
 	// #6996). The fallback only kicks in when the caller did not pass an
@@ -230,7 +392,15 @@ func Build(ctx context.Context, opts Options) (*control.Controller, error) {
 		runtimeProfile = capability.ProfileDelivery
 	}
 	keepPolicy := agentKeepPolicy(cfg.Agent.Keep)
-	entry, modelRef, err := resolveModelEntry(opts, cfg, modelName)
+	// Entry resolution: the caller-owned broker is authoritative for every
+	// ref; the extension-merged resolver only owns plugin refs — a config ref
+	// keeps the full config entry (kind, endpoint, credentials, balance URL,
+	// missing-key notice), exactly as without extensions installed.
+	entryResolver := opts.ProviderResolver
+	if entryResolver == nil && extensionResolver != nil && providerext.PluginRefOwner(modelName) != "" {
+		entryResolver = extensionResolver
+	}
+	entry, modelRef, err := resolveModelEntry(entryResolver, cfg, modelName)
 	if err != nil {
 		return nil, err
 	}
@@ -240,17 +410,14 @@ func Build(ctx context.Context, opts Options) (*control.Controller, error) {
 			entry.Thinking = "adaptive"
 		}
 	}
-	if opts.RequireKey && opts.ProviderResolver == nil {
+	// RequireKey fails fast on a missing credential (run/serve); plugin-
+	// namespaced refs carry no config credential — the extension provider holds
+	// its own keys — so the merged resolver's resolution is their only gate.
+	if opts.RequireKey && opts.ProviderResolver == nil && providerext.PluginRefOwner(modelName) == "" {
 		if err := cfg.Validate(modelName); err != nil {
 			return nil, err
 		}
 	}
-
-	// Serialize the frontend's sink once: background jobs (below) emit from their
-	// own goroutines, which can overlap a running turn's emission, so every emitter
-	// shares this synchronized sink. The job manager is session-scoped — its jobs
-	// outlive a turn and are cancelled by Controller.Close.
-	sink := event.Sync(opts.Sink)
 
 	if migErr != nil {
 		sink.Emit(event.Event{Kind: event.Notice, Level: event.LevelWarn, Text: "Config migration did not complete.", Detail: "config migration from ~/.inx failed: " + migErr.Error()})
@@ -343,7 +510,8 @@ func Build(ctx context.Context, opts Options) (*control.Controller, error) {
 		sink.Emit(event.Event{Kind: event.Notice, Level: event.LevelWarn, Text: "cleanup-pending reconciliation failed: " + err.Error()})
 	}
 
-	proxySpec := cfg.NetworkProxySpec()
+	// proxySpec was computed during extension preflight (the merged resolver's
+	// local base needs it); validate it before any provider construction.
 	if err := netclient.Validate(proxySpec); err != nil {
 		return nil, err
 	}
@@ -352,7 +520,7 @@ func Build(ctx context.Context, opts Options) (*control.Controller, error) {
 		return nil, err
 	}
 
-	execProv, err := resolveProvider(opts, cfg, proxySpec, provider.Selection{Ref: modelRef, Effort: opts.EffortOverride})
+	execProv, err := resolveProvider(effectiveResolver, cfg, proxySpec, provider.Selection{Ref: modelRef, Effort: opts.EffortOverride})
 	if err != nil {
 		return nil, err
 	}
@@ -360,7 +528,14 @@ func Build(ctx context.Context, opts Options) (*control.Controller, error) {
 
 	sysPrompt, err := cfg.ResolveSystemPromptForRoot(root)
 	if err != nil {
-		return nil, err
+		if !config.IsMissingSystemPromptFile(err) {
+			return nil, err
+		}
+		// A stale missing prompt file must not block startup: warn and fall back
+		// to the inline (or built-in default) system prompt. Other read failures
+		// stay fatal so Inx never runs without explicitly configured policy.
+		sink.Emit(event.Event{Kind: event.Notice, Level: event.LevelWarn, Text: err.Error() + "; falling back to inline/default system prompt"})
+		sysPrompt = cfg.InlineSystemPrompt()
 	}
 	// Output style: fold the selected persona/tone block into the base prompt
 	// before language/memory/skills append, so a "replace" style (keep-coding
@@ -368,8 +543,7 @@ func Build(ctx context.Context, opts Options) (*control.Controller, error) {
 	if st, ok := outputstyle.Resolve(cfg.Agent.OutputStyle, outputstyle.Dirs()); ok {
 		sysPrompt = outputstyle.Apply(sysPrompt, st)
 	}
-	sysPrompt += "\n\n" + config.UserDecisionPolicy
-	sysPrompt += "\n\n" + config.LanguagePolicy
+	sysPrompt = appendCorePolicies(sysPrompt)
 	if workspaceLine := currentWorkspacePromptLine(root); workspaceLine != "" {
 		sysPrompt += "\n\n" + workspaceLine
 	}
@@ -401,6 +575,7 @@ func Build(ctx context.Context, opts Options) (*control.Controller, error) {
 			sysPrompt += "\n\n" + envSection
 		}
 	}
+	sysPrompt = appendOfflineEnvironmentNote(sysPrompt, cfg.Environment.Offline)
 
 	// Persistent memory (INX.md / AGENTS.md hierarchy + auto-memory index)
 	// folds into the system prompt exactly here, once: it becomes part of the
@@ -483,11 +658,18 @@ func Build(ctx context.Context, opts Options) (*control.Controller, error) {
 		enabledBuiltins = tokenEconomyBuiltins(enabledBuiltins)
 	}
 	readPathResolver := builtin.NewPathResolver()
+	// Session-private temporary directory manager for Bash/grep. Rebuild
+	// reuses the previous Controller's Manager; a fresh build creates one
+	// here so tools and the Controller share the same instance from boot.
+	sessionTemp := opts.SessionTemp
+	if sessionTemp == nil {
+		sessionTemp = sessiontemp.New()
+	}
 	// An explicit Economy allowlist can contain only on-demand tools, leaving no
 	// startup built-ins. Do not pass that filtered empty slice to addBuiltins,
 	// where an empty list intentionally means "all built-ins".
 	if !tokenEconomy || len(cfg.Tools.Enabled) == 0 || len(enabledBuiltins) > 0 {
-		addBuiltins(reg, enabledBuiltins, writeRoots, bashSpec, bashTimeout, searchSpec, stderr, root, proxySpec, forbidReadRoots, readPathResolver, sessionGuard, managedConfig, opts.FileOverlay, opts.TerminalRunner)
+		addBuiltins(reg, enabledBuiltins, writeRoots, bashSpec, bashTimeout, searchSpec, stderr, root, proxySpec, forbidReadRoots, readPathResolver, sessionGuard, managedConfig, opts.FileOverlay, opts.TerminalRunner, sessionTemp)
 	}
 	// Use the caller-supplied shared host when set, so controllers for the same
 	// workspace root reuse running MCP processes (e.g. one CodeGraph daemon
@@ -714,11 +896,8 @@ func Build(ctx context.Context, opts Options) (*control.Controller, error) {
 		cleanup = func() { prev(); lspMgr.Close() }
 	}
 
-	maxSteps := 0
-	if opts.MaxSteps > 0 {
-		maxSteps = opts.MaxSteps
-	}
-	subagentStore, err := newSubagentStore(sessionDir)
+	maxSteps := max(opts.MaxSteps, 0)
+	subagentStore, err := newSubagentStore(sessionDir, opts.SubagentParentLive)
 	if err != nil {
 		return nil, err
 	}
@@ -765,8 +944,8 @@ func Build(ctx context.Context, opts Options) (*control.Controller, error) {
 			if resolved, ok := cfg.ResolveModel(modelRef); ok {
 				me = *resolved
 				selectedRef = modelRefFromEntry(resolved)
-			} else if opts.ProviderResolver != nil {
-				me = *syntheticEntryFromResolver(opts.ProviderResolver, modelRef)
+			} else if effectiveResolver != nil {
+				me = *syntheticEntryFromResolver(effectiveResolver, modelRef)
 				selectedRef = modelRef
 			} else {
 				return nil, nil, 0, fmt.Errorf("unknown model %q", modelRef)
@@ -776,7 +955,7 @@ func Build(ctx context.Context, opts Options) (*control.Controller, error) {
 		if strings.TrimSpace(effort) != "" {
 			normalized, err := config.NormalizeEffort(&me, effort)
 			if err != nil {
-				if opts.ProviderResolver == nil {
+				if effectiveResolver == nil {
 					return nil, nil, 0, err
 				}
 				normalized = effort
@@ -787,14 +966,14 @@ func Build(ctx context.Context, opts Options) (*control.Controller, error) {
 				me.Thinking = "adaptive"
 			}
 		}
-		p, err := resolveProvider(opts, cfg, proxySpec, provider.Selection{Ref: selectedRef, Effort: effortOverride})
+		p, err := resolveProvider(effectiveResolver, cfg, proxySpec, provider.Selection{Ref: selectedRef, Effort: effortOverride})
 		if err != nil {
 			return nil, nil, 0, err
 		}
 		return p, me.Price, me.ContextWindow, nil
 	}
 	subagentIdentity := func(modelRef, effort string) (string, string) {
-		return subagentEffectiveIdentity(cfg, modelName, entry, modelRef, effort)
+		return subagentEffectiveIdentity(cfg, opts.ProviderResolver, modelName, entry, modelRef, effort)
 	}
 	taskModel := firstNonEmpty(cfg.Agent.SubagentModels["task"], cfg.Agent.SubagentModel)
 	taskEffort := firstNonEmpty(cfg.Agent.SubagentEfforts["task"], cfg.Agent.SubagentEffort)
@@ -870,6 +1049,7 @@ func Build(ctx context.Context, opts Options) (*control.Controller, error) {
 			WithTranscriptIdentityResolver(subagentIdentity).
 			WithMaxSubagentDepth(maxSubagentDepth).
 			WithDeliveryProfile(tokenDelivery).
+			WithAblation(opts.Ablation).
 			WithWorkspaceLease(workspaceLease).
 			WithScheduler(subagentScheduler).
 			WithProfileLookup(profileLookup).
@@ -878,6 +1058,9 @@ func Build(ctx context.Context, opts Options) (*control.Controller, error) {
 			WithCapabilityRuntime(capRuntime)
 	}
 	addTaskTool := func() string {
+		if opts.Ablation.Off(ablation.Subagent) {
+			return "task tool is disabled for this run."
+		}
 		if taskToolAdded {
 			return "task tool is already enabled."
 		}
@@ -885,14 +1068,19 @@ func Build(ctx context.Context, opts Options) (*control.Controller, error) {
 		if taskTool == nil {
 			taskTool = newTaskTool()
 		}
-		// Fixed registration order for prompt-cache stability: task →
-		// parallel_tasks → fleet. Profile names never enter tool schemas.
+		// The registry exports schemas in stable name order. Keep this surface
+		// static: profile names and result refs never enter provider-visible
+		// schemas, and the result reader does not change between turns.
 		reg.Add(taskTool)
 		reg.Add(agent.NewParallelTasksTool(taskTool, reg))
 		reg.Add(agent.NewFleetTool(taskTool))
+		reg.Add(agent.NewSubagentResultTool(taskTool))
 		return "enabled task."
 	}
 	addReadOnlyTaskTool := func() string {
+		if opts.Ablation.Off(ablation.Subagent) {
+			return "read_only_task tool is disabled for this run."
+		}
 		if readOnlyTaskToolAdded {
 			return "read_only_task tool is already enabled."
 		}
@@ -908,15 +1096,33 @@ func Build(ctx context.Context, opts Options) (*control.Controller, error) {
 		addReadOnlyTaskTool()
 	}
 
-	// Session and memory tools are always present in Balanced/Delivery. Economy
-	// installs them only after connect_tool_source requests that capability, so
-	// simple coding turns do not pay for unrelated schemas.
+	// Product documentation, session, and memory tools are always present in
+	// Balanced/Delivery. Economy installs them only after connect_tool_source
+	// requests that capability, so simple coding turns do not pay for unrelated
+	// schemas.
+	docsToolAdded := false
+	addDocsTool := func() string {
+		if docsToolAdded {
+			return "docs is already enabled."
+		}
+		docsToolAdded = true
+		reg.Add(productdocs.NewTool())
+		return "enabled docs."
+	}
 	sessionToolsAdded := false
 	addSessionTools := func() string {
 		if sessionToolsAdded {
 			return "sessions are already enabled."
 		}
 		sessionToolsAdded = true
+		// history and memory are the BM25-backed surfaces; the ablation arm drops
+		// only those two and leaves the direct-access tools alone, so a lost solve
+		// is attributable to retrieval and not to a missing session reader.
+		if opts.Ablation.Off(ablation.Retrieval) {
+			reg.Add(sessiontool.NewListSessionsTool(sessionDir))
+			reg.Add(sessiontool.NewReadSessionTool(sessionDir))
+			return "enabled list_sessions, read_session."
+		}
 		reg.Add(history.NewTool(history.Options{SessionDir: sessionDir, GlobalSessionDir: config.SessionDir(), ArchiveDir: config.ArchiveDir()}))
 		reg.Add(sessiontool.NewListSessionsTool(sessionDir))
 		reg.Add(sessiontool.NewReadSessionTool(sessionDir))
@@ -928,12 +1134,18 @@ func Build(ctx context.Context, opts Options) (*control.Controller, error) {
 			return "memory tools are already enabled."
 		}
 		memoryToolsAdded = true
+		if opts.Ablation.Off(ablation.Retrieval) {
+			reg.Add(memory.NewRememberTool(mem.Store))
+			reg.Add(memory.NewForgetTool(mem.Store))
+			return "enabled remember, forget."
+		}
 		reg.Add(memory.NewRecallTool(mem.Store))
 		reg.Add(memory.NewRememberTool(mem.Store))
 		reg.Add(memory.NewForgetTool(mem.Store))
 		return "enabled memory, remember, forget."
 	}
 	if !tokenEconomy {
+		addDocsTool()
 		addSessionTools()
 		addMemoryTools()
 	}
@@ -974,6 +1186,7 @@ func Build(ctx context.Context, opts Options) (*control.Controller, error) {
 			SubagentDepth:       childDepth,
 			MaxSubagentDepth:    maxSubagentDepth,
 			DeliveryProfile:     tokenDelivery,
+			Ablation:            opts.Ablation,
 			WorkspaceLease:      workspaceLease,
 		}
 	}
@@ -1026,6 +1239,8 @@ func Build(ctx context.Context, opts Options) (*control.Controller, error) {
 			sysPrompt = agent.DefaultReadOnlyTaskSystemPrompt
 		}
 		runOptions := subagentSkillOptions(sctx, steps, price, ctxWin, childDepth)
+		usageModelRef, _ := subagentIdentity(modelRef, effortRef)
+		runOptions.ModelRef = usageModelRef
 		// Delivery risk gates consume typed reports; outside Delivery a casual
 		// /review run may finish with prose only.
 		if runOptions.DeliveryProfile {
@@ -1145,6 +1360,8 @@ func Build(ctx context.Context, opts Options) (*control.Controller, error) {
 			}
 		}
 		runOptions := subagentSkillOptions(sctx, steps, price, ctxWin, childDepth)
+		usageModelRef, _ := subagentIdentity(modelRef, effortRef)
+		runOptions.ModelRef = usageModelRef
 		// Delivery risk gates consume typed reports; outside Delivery a casual
 		// /review run may finish with prose only.
 		if runOptions.DeliveryProfile {
@@ -1187,7 +1404,6 @@ func Build(ctx context.Context, opts Options) (*control.Controller, error) {
 		var slashEntries []command.SlashEntry
 		if includeSkills {
 			for _, sk := range skillStore.SlashList() {
-				sk := sk
 				slashEntries = append(slashEntries, command.SlashEntry{
 					Name:        sk.SlashName(),
 					Description: sk.Description,
@@ -1199,7 +1415,7 @@ func Build(ctx context.Context, opts Options) (*control.Controller, error) {
 			if cmd.Hidden {
 				continue
 			}
-			cmd := cmd
+
 			slashEntries = append(slashEntries, command.SlashEntry{
 				Name:        cmd.Name,
 				Description: cmd.Description,
@@ -1332,10 +1548,14 @@ func Build(ctx context.Context, opts Options) (*control.Controller, error) {
 				ManagedConfig:   managedConfig,
 				FileOverlay:     opts.FileOverlay,
 				Terminal:        opts.TerminalRunner,
+				SessionTemp:     sessionTemp,
 			}.Tools(missing...))
 			return "enabled " + strings.Join(installed, ", ") + "."
 		}
 		reg.Add(&toolSourceConnector{
+			docs: func(context.Context) (string, error) {
+				return addDocsTool(), nil
+			},
 			skills: func(context.Context) (string, error) {
 				return addSkillTools(), nil
 			},
@@ -1458,7 +1678,7 @@ func Build(ctx context.Context, opts Options) (*control.Controller, error) {
 	// independent ledgers/audits while sharing the session MCP runtime.
 	dualModelPlanner := false
 	if pm := effectivePlannerModel(cfg, opts, tokenEconomy); pm != "" {
-		if pe, ok := resolveOptionalEntry(opts, cfg, pm); ok && pe.Model != entry.Model {
+		if pe, ok := resolveOptionalEntry(effectiveResolver, cfg, pm); ok && pe.Model != entry.Model {
 			dualModelPlanner = true
 		}
 	}
@@ -1545,6 +1765,7 @@ func Build(ctx context.Context, opts Options) (*control.Controller, error) {
 		MaxStepsKey: opts.MaxStepsKey,
 		Temperature: cfg.Agent.Temperature,
 		Pricing:     entry.Price,
+		ModelRef:    modelRef,
 		Gate:        headlessGate,
 		Hooks:       hookRunner,
 		Jobs:        jm,
@@ -1554,6 +1775,7 @@ func Build(ctx context.Context, opts Options) (*control.Controller, error) {
 		WriteWorkspaceRoot:           root,
 		ProjectChecks:                projectChecks,
 		DeliveryProfile:              tokenDelivery,
+		Ablation:                     opts.Ablation,
 		WorkspaceLease:               workspaceLease,
 		CapabilityLedger:             capLedger,
 		CapabilityAudit:              capAudit,
@@ -1578,13 +1800,19 @@ func Build(ctx context.Context, opts Options) (*control.Controller, error) {
 	// Coordinator with its own session, kept separate for cache stability. The
 	// planner gets the same standing memory context and a filtered read-only
 	// research tool set, so it can inspect rules/code without side effects.
-	if pm := effectivePlannerModel(cfg, opts, tokenEconomy); pm != "" {
-		pe, ok := resolveOptionalEntry(opts, cfg, pm)
-		if !ok {
-			return nil, fmt.Errorf("planner_model %q is not a configured provider", pm)
-		}
+	pm := effectivePlannerModel(cfg, opts, tokenEconomy)
+	pe, plannerResolved := resolveOptionalEntry(effectiveResolver, cfg, pm)
+	if pm != "" && !plannerResolved {
+		// An unusable optional planner must not take the session down with it —
+		// the executor is what the user talks to. Degrades like the guardian
+		// model below (#4615).
+		slog.Warn("planner model is not a configured provider — planning disabled", "model", pm)
+		sink.Emit(event.Event{Kind: event.Notice, Level: event.LevelWarn,
+			Text: fmt.Sprintf("planner_model %q is not a configured provider — continuing with the executor alone", pm)})
+	}
+	if pm != "" && plannerResolved {
 		if pe.Model != entry.Model {
-			plannerProv, err := resolveProvider(opts, cfg, proxySpec, provider.Selection{Ref: modelRefFromEntry(pe)})
+			plannerProv, err := resolveProvider(effectiveResolver, cfg, proxySpec, provider.Selection{Ref: modelRefFromEntry(pe)})
 			if err != nil {
 				return nil, fmt.Errorf("planner %q: %w", pm, err)
 			}
@@ -1605,6 +1833,7 @@ func Build(ctx context.Context, opts Options) (*control.Controller, error) {
 			plannerOpts := agent.Options{
 				MaxSteps:                     0,
 				Gate:                         headlessGate,
+				ModelRef:                     modelRefFromEntry(pe),
 				ContextWindow:                pe.ContextWindow,
 				SoftCompactRatio:             cfg.Agent.SoftCompactRatio,
 				ToolResultSnipRatio:          cfg.Agent.ToolResultSnipRatio,
@@ -1625,27 +1854,30 @@ func Build(ctx context.Context, opts Options) (*control.Controller, error) {
 	}
 
 	ctrlOpts := control.Options{
-		Runner:                runner,
-		Executor:              executor,
-		Sink:                  sink,
-		Policy:                policy,
-		SubagentGate:          headlessGate,
-		Label:                 label,
-		ModelRef:              modelRef,
-		SystemPrompt:          sysPrompt,
-		SessionDir:            sessionDir,
-		Host:                  pluginHost,
-		Commands:              cmds,
-		Skills:                skills,
-		AllSkills:             allSkills,
-		SkillStore:            skillStore,
-		AllSkillStore:         allSkillStore,
-		SkillRunner:           skillRunner,
-		ReadOnlySkillRunner:   readOnlySkillRunner,
-		SkillProfile:          skillProfile,
-		Hooks:                 hookRunner,
-		Memory:                mem,
-		Cleanup:               cleanup,
+		Runner:              runner,
+		Executor:            executor,
+		Sink:                sink,
+		Policy:              policy,
+		SubagentGate:        headlessGate,
+		Label:               label,
+		ModelRef:            modelRef,
+		SystemPrompt:        sysPrompt,
+		SessionDir:          sessionDir,
+		Host:                pluginHost,
+		Commands:            cmds,
+		Skills:              skills,
+		AllSkills:           allSkills,
+		SkillStore:          skillStore,
+		AllSkillStore:       allSkillStore,
+		SkillRunner:         skillRunner,
+		ReadOnlySkillRunner: readOnlySkillRunner,
+		SkillProfile:        skillProfile,
+		Hooks:               hookRunner,
+		Memory:              mem,
+		// Indirection: the cleanup variable gains the extension runtime set at
+		// the end of build (snapshot assembly runs after control.New), and the
+		// controller must observe the final chain at Close time.
+		Cleanup:               func() { cleanup() },
 		BalanceURL:            entry.BalanceURL,
 		BalanceKey:            entry.APIKey(),
 		BalanceClient:         balanceClient,
@@ -1676,6 +1908,7 @@ func Build(ctx context.Context, opts Options) (*control.Controller, error) {
 		Shell:                  shell,
 		ApprovalTimeout:        opts.ApprovalTimeout,
 		RuntimeProfile:         runtimeProfile,
+		Ablation:               opts.Ablation,
 		OnRemember: func(rule string) control.RememberResult {
 			return rememberPermissionRule(root, rule)
 		},
@@ -1684,23 +1917,29 @@ func Build(ctx context.Context, opts Options) (*control.Controller, error) {
 		},
 		SessionRecoveryMeta: opts.SessionRecoveryMeta,
 		OnSessionRecovered:  opts.OnSessionRecovered,
+		// The merged catalog (nil without provider-declaring sidecars) lets
+		// frontends enumerate plugin/... models through ProviderCatalog.
+		ProviderResolver: extensionResolver,
+		// Share the Manager already bound into bash/grep so tools and the
+		// Controller observe the same temporary generation across rebuilds.
+		SessionTemp: sessionTemp,
 	}
 	// Guardian: when guardian_model is configured, spawn an LLM safety reviewer
 	// that can auto-allow safe Ask decisions and annotate risky ones before
 	// escalating to the human approval prompt.
 	if guardianModel := cfg.Agent.GuardianModel; guardianModel != "" {
-		ge, ok := resolveOptionalEntry(opts, cfg, guardianModel)
+		ge, ok := resolveOptionalEntry(effectiveResolver, cfg, guardianModel)
 		if !ok {
 			slog.Warn("guardian model is not a configured provider — guardian disabled", "model", guardianModel)
 			sink.Emit(event.Event{Kind: event.Notice, Level: event.LevelWarn, Text: "Guardian was disabled because its model was not found.", Detail: fmt.Sprintf("guardian_model %q not found — guardian disabled", guardianModel)})
 		} else {
-			pProv, err := resolveProvider(opts, cfg, proxySpec, provider.Selection{Ref: modelRefFromEntry(ge)})
+			pProv, err := resolveProvider(effectiveResolver, cfg, proxySpec, provider.Selection{Ref: modelRefFromEntry(ge)})
 			if err != nil {
 				slog.Warn("guardian provider construction failed — guardian disabled", "model", guardianModel, "err", err)
 				sink.Emit(event.Event{Kind: event.Notice, Level: event.LevelWarn, Text: "Guardian was disabled because it could not start.", Detail: fmt.Sprintf("guardian construction failed: %v — guardian disabled", err)})
 			} else {
 				guardianReg := agent.FilterReadOnlyRegistry(reg, agent.SubagentMetaTools()...)
-				ctrlOpts.Guardian = guardian.NewSession(pProv, guardianReg, guardian.PolicyPrompt(), guardianModel, cfg.Agent.GuardianTemperature, ge.Price, sink)
+				ctrlOpts.Guardian = guardian.NewSession(pProv, guardianReg, guardian.PolicyPrompt(), modelRefFromEntry(ge), cfg.Agent.GuardianTemperature, ge.Price, sink)
 				sink.Emit(event.Event{Kind: event.Notice, Level: event.LevelInfo, Text: fmt.Sprintf("guardian enabled · model=%s", ge.Model)})
 			}
 		}
@@ -1716,9 +1955,19 @@ func Build(ctx context.Context, opts Options) (*control.Controller, error) {
 			recoveryModel = modelRef
 		}
 		if recoveryModel != "" {
-			if re, ok := cfg.ResolveModel(recoveryModel); ok {
+			if extensionResolver != nil && providerext.PluginRefOwner(recoveryModel) != "" {
+				// A plugin-namespaced recovery reviewer resolves through the
+				// merged resolver; the config path cannot see extension refs.
+				if re, ok := resolveOptionalEntry(extensionResolver, cfg, recoveryModel); ok {
+					if rProv, err := extensionResolver.Resolve(provider.Selection{Ref: modelRefFromEntry(re)}); err == nil {
+						ctrlOpts.RecoveryReviewer = recovery.NewSessionWithSink(rProv, re.Price, modelRefFromEntry(re), sink)
+					} else {
+						slog.Warn("recovery reviewer provider construction failed — rule-only recovery", "model", recoveryModel, "err", err)
+					}
+				}
+			} else if re, ok := cfg.ResolveModel(recoveryModel); ok {
 				if rProv, err := NewProviderWithProxy(re, proxySpec); err == nil {
-					ctrlOpts.RecoveryReviewer = recovery.NewSessionWithSink(rProv, re.Price, sink)
+					ctrlOpts.RecoveryReviewer = recovery.NewSessionWithSink(rProv, re.Price, modelRefFromEntry(re), sink)
 				} else {
 					slog.Warn("recovery reviewer provider construction failed — rule-only recovery", "model", recoveryModel, "err", err)
 				}
@@ -1729,7 +1978,34 @@ func Build(ctx context.Context, opts Options) (*control.Controller, error) {
 		// that capability: bots have a bounded timeout and can still answer cards.
 		ctrlOpts.RecoveryHeadless = recoveryHeadlessMode(opts)
 	}
+	// Goal evaluator: the same zero-config model fallback as the recovery
+	// reviewer (recovery_model → guardian_model → main model), isolated session
+	// and policy. When unavailable, Goal turns without an update_goal report
+	// fail closed and pause instead of defaulting to continue.
+	{
+		evalModel := strings.TrimSpace(cfg.Agent.RecoveryModel)
+		if evalModel == "" {
+			evalModel = strings.TrimSpace(cfg.Agent.GuardianModel)
+		}
+		if evalModel == "" {
+			evalModel = modelRef
+		}
+		if evalModel != "" {
+			if re, ok := cfg.ResolveModel(evalModel); ok {
+				if eProv, err := NewProviderWithProxy(re, proxySpec); err == nil {
+					ctrlOpts.GoalEvaluator = goaleval.NewSessionWithSink(eProv, re.Price, modelRefFromEntry(re), sink)
+				} else {
+					slog.Warn("goal evaluator provider construction failed — goals without an update_goal report will pause", "model", evalModel, "err", err)
+				}
+			}
+		}
+	}
 	ctrl := control.New(ctrlOpts)
+	// Publish the controller to the extension UI hub's indirection: from here
+	// on, host/ui/* publishes ride ctrl.EmitExtensionEvent and blocking prompts
+	// ride ctrl.Ask, exactly as if the hub had been built after control.New.
+	ctrlRef.Store(ctrl)
+	close(controllerReady)
 	// Share the recovery checkpoint with task/fleet sub-agents so background
 	// writers observe the same failure state as the root agent.
 	if taskTool != nil {
@@ -1749,14 +2025,16 @@ func Build(ctx context.Context, opts Options) (*control.Controller, error) {
 		var router *capability.SemanticRouter
 		// Prefer agent.subagent_models["capability-router"] when configured.
 		if modelRef := strings.TrimSpace(cfg.Agent.SubagentModels["capability-router"]); modelRef != "" {
-			if p, price, _, err := resolveSubagentProvider(modelRef, strings.TrimSpace(cfg.Agent.SubagentEfforts["capability-router"])); err == nil && p != nil {
-				router = &capability.SemanticRouter{Provider: p, Sink: sink, Model: modelRef, Pricing: price, Audit: capAudit}
+			effortRef := strings.TrimSpace(cfg.Agent.SubagentEfforts["capability-router"])
+			if p, price, _, err := resolveSubagentProvider(modelRef, effortRef); err == nil && p != nil {
+				usageModelRef, _ := subagentIdentity(modelRef, effortRef)
+				router = &capability.SemanticRouter{Provider: p, Sink: sink, Model: usageModelRef, Pricing: price, Audit: capAudit}
 			}
 		}
 		if router == nil {
 			// Fallback to the executor's provider — and its pricing, so router
 			// usage events never display as zero-cost.
-			router = &capability.SemanticRouter{Provider: execProv, Sink: sink, Pricing: entry.Price, Audit: capAudit}
+			router = &capability.SemanticRouter{Provider: execProv, Sink: sink, Model: modelRef, Pricing: entry.Price, Audit: capAudit}
 		}
 		ctrl.WireCapabilityRouting(cfg.Plugins, capSpecs, router, capAudit)
 		ctrl.SetCapabilityProxyRouting(true)
@@ -1769,14 +2047,105 @@ func Build(ctx context.Context, opts Options) (*control.Controller, error) {
 		ctrl.WireCapabilityRouting(cfg.Plugins, capSpecs, nil, capAudit)
 		ctrl.SetCapabilityProxyRouting(true)
 	}
-	return ctrl, nil
+
+	// Freeze the extension kernel's snapshot of exactly what this build wired.
+	// The snapshot is assembled from the in-hand objects above — discovery
+	// never re-runs — and assembly must never fail the boot: a kernel error
+	// degrades to a nil snapshot (logged) while the controller behaves exactly
+	// as before. The sidecar Manager comes from preflight (started once,
+	// before model resolution); assembly takes over its ownership and freezes
+	// the same generation the sidecars were handshaken with. The frozen
+	// provider catalog is the BASE catalog, exactly as before the preflight
+	// refactor: sidecar providers enter the snapshot through the Manager's own
+	// contributions, not through the legacy provider list.
+	mcpSpecs := enabledMCPSpecs(configSpecs, extraSpecs, onDemandMCPNames, onDemandMCPSpecs, tokenEconomy)
+	snap, runtimeSet, extensionDispatcher, snapErr := assembleLegacySnapshot(ctx, legacyAssembly{
+		systemPrompt: sysPrompt,
+		registry:     reg,
+		skills:       skills,
+		commands:     cmds,
+		hooks:        resolvedHooks,
+		mcpSpecs:     mcpSpecs,
+		providers:    baseResolver.Catalog(),
+	}, generation, extensionBoot{
+		session:   protocol.SessionContext{SessionID: sessionID, WorkspaceRoot: root, Generation: generation},
+		ui:        extUIHub,
+		onWarning: extWarn,
+	}, extensionMgr)
+	// Ownership of the preflighted Manager transferred to assembly on every
+	// path: it was either closed inside or registered into the RuntimeSet.
+	pendingMgr = nil
+	if snapErr != nil {
+		// These assembly failures are fatal rather than degradable: two
+		// runtimes claiming the same replacement slot (the kernel's
+		// ReplaceClaims verdict) and a failed system_prompt.build strategy
+		// ruling (the slot owner is required-class, so dispatch surfaces its
+		// failure as one of these types) mean the extension contract the user
+		// installed cannot be honored; booting without it would silently
+		// change what the session is. (A required runtime that cannot start
+		// fails earlier, in preflight, with the same fatality.)
+		var requiredErr *sidecar.RequiredStartError
+		var slotErr *extension.SlotConflictError
+		var blockErr *dispatch.BlockError
+		var failureErr *dispatch.FailureError
+		var violationErr *dispatch.ViolationError
+		if errors.As(snapErr, &requiredErr) || errors.As(snapErr, &slotErr) ||
+			errors.As(snapErr, &blockErr) || errors.As(snapErr, &failureErr) || errors.As(snapErr, &violationErr) {
+			ctrl.ReleaseResources()
+			return nil, fmt.Errorf("boot: %w", snapErr)
+		}
+		slog.Warn("boot: extension snapshot assembly failed; continuing without a runtime snapshot", "err", snapErr)
+		runtimeSet = extension.NewRuntimeSet(generation)
+		// Assembly retired the preflighted Manager on the error path; the
+		// controller must not bind a hub or expose a manager whose sidecars
+		// are already shut down.
+		extensionMgr = nil
+	}
+	// The stage-7 provider merge happened at preflight, before model
+	// resolution; BuildResult.ProviderResolver exposes that same merged
+	// resolver (the base when no sidecar declared providers).
+	providerResolver := baseResolver
+	if extensionResolver != nil {
+		providerResolver = extensionResolver
+	}
+	// The runtime set (extension sidecar Manager, when any) is owned by the
+	// controller: chain its close into the controller cleanup the way LSP
+	// cleanup is chained, so sidecars live exactly as long as their
+	// controller. RuntimeSet.Close is idempotent, so double-close paths
+	// (Rebuild's fail-atomic cleanup) stay safe.
+	prevCleanup := cleanup
+	cleanup = func() { prevCleanup(); _ = runtimeSet.Close() }
+	// The dispatcher only exists once sidecars started and the snapshot froze,
+	// both of which happen after control.New — hand it to the already-built
+	// controller before the build returns. Nil (no sidecars, or a degraded
+	// snapshot) leaves the controller byte-identical to the pre-dispatch path.
+	ctrl.SetExtensions(extensionDispatcher)
+	// Stage 8a: the UI hub only earns its place on the controller when
+	// sidecars actually started — with none, the hub is dropped here and the
+	// session behaves exactly as if it never existed.
+	if extensionMgr == nil {
+		extUIHub = nil
+	} else {
+		ctrl.SetExtensionUI(extUIHub)
+	}
+	// Stage 6b2 system-prompt handoff: the 6b1 strategy pass may have replaced
+	// the prompt while the snapshot was freezing, but the executor session was
+	// built earlier with the host-composed prompt. Swap in a fresh session
+	// carrying the final prompt now — before any turn or history resume, so
+	// the live session and the frozen snapshot describe the same session.
+	if snap != nil {
+		if final := snap.SystemPrompt(); final != sysPrompt {
+			ctrl.ApplyExtensionSystemPrompt(final)
+		}
+	}
+	return &BuildResult{Controller: ctrl, Snapshot: snap, Runtime: runtimeSet, Extensions: extensionMgr, Dispatcher: extensionDispatcher, ExtensionUI: extUIHub, ProviderResolver: providerResolver}, nil
 }
 
 // effectivePlannerModel centralizes planner precedence. The explicit ACP hard
 // override is checked before user/project config and cannot be reversed by a
 // later assembly branch.
 func effectivePlannerModel(cfg *config.Config, opts Options, tokenEconomy bool) string {
-	if cfg == nil || opts.DisablePlanner || tokenEconomy {
+	if cfg == nil || opts.Ablation.Off(ablation.Planner) || tokenEconomy {
 		return ""
 	}
 	return strings.TrimSpace(cfg.Agent.PlannerModel)
@@ -1976,13 +2345,7 @@ func SubagentModelKeys(name string) []string {
 		if alias == "" {
 			continue
 		}
-		seen := false
-		for _, key := range keys {
-			if key == alias {
-				seen = true
-				break
-			}
-		}
+		seen := slices.Contains(keys, alias)
 		if !seen {
 			keys = append(keys, alias)
 		}
@@ -2140,35 +2503,50 @@ func isGitMarker(path string) bool {
 	return err == nil && (fi.IsDir() || fi.Mode().IsRegular())
 }
 
-func newSubagentStore(sessionDir string) (*agent.SubagentStore, error) {
+func newSubagentStore(sessionDir string, parentLive func(sessionPath string) bool) (*agent.SubagentStore, error) {
 	sessionDir = strings.TrimSpace(sessionDir)
 	if sessionDir == "" {
 		return nil, nil
 	}
-	store := agent.NewSubagentStore(filepath.Join(sessionDir, "subagents"))
+	store := agent.NewSubagentStore(filepath.Join(sessionDir, "subagents")).WithParentSessionProbe(parentLive)
 	if _, err := store.CleanupStaleRunning(); err != nil {
 		return nil, fmt.Errorf("cleanup stale subagents: %w", err)
 	}
 	return store, nil
 }
 
-func subagentEffectiveIdentity(cfg *config.Config, baseModelRef string, base *config.ProviderEntry, modelRef, effort string) (string, string) {
+func subagentEffectiveIdentity(cfg *config.Config, resolver provider.Resolver, baseModelRef string, base *config.ProviderEntry, modelRef, effort string) (string, string) {
 	var entry config.ProviderEntry
 	if base != nil {
 		entry = *base
 	}
 	ref := strings.TrimSpace(modelRef)
-	if ref == "" {
+	explicit := ref != ""
+	if !explicit {
 		ref = strings.TrimSpace(baseModelRef)
 	}
-	if cfg != nil && ref != "" {
+	if explicit && cfg != nil && ref != "" {
 		if resolved, ok := cfg.ResolveModel(ref); ok {
 			entry = *resolved
-		} else if strings.TrimSpace(modelRef) != "" {
+		} else if resolved := syntheticEntryFromResolver(resolver, ref); strings.TrimSpace(resolved.Name) != "" {
+			entry = *resolved
+		} else {
 			entry.Model = ref
 		}
-	} else if strings.TrimSpace(modelRef) != "" {
-		entry.Model = strings.TrimSpace(modelRef)
+	} else if explicit {
+		if resolved := syntheticEntryFromResolver(resolver, ref); strings.TrimSpace(resolved.Name) != "" {
+			entry = *resolved
+		} else {
+			entry.Model = ref
+		}
+	} else if base == nil && ref != "" {
+		if resolved := syntheticEntryFromResolver(resolver, ref); strings.TrimSpace(resolved.Name) != "" {
+			entry = *resolved
+		} else if cfg != nil {
+			if resolved, ok := cfg.ResolveModel(ref); ok {
+				entry = *resolved
+			}
+		}
 	}
 	if rawEffort := strings.TrimSpace(effort); rawEffort != "" {
 		if normalized, err := config.NormalizeEffort(&entry, rawEffort); err == nil {
@@ -2214,6 +2592,7 @@ func NewProviderWithProxy(e *config.ProviderEntry, proxy netclient.ProxySpec) (p
 			"effort":                config.EffectiveEffort(e),
 			"supported_efforts":     e.SupportedEfforts,
 			"reasoning_protocol":    config.ReasoningProtocolForEntry(e),
+			"max_output_tokens":     e.MaxOutputTokens,
 			"chat_url":              e.ChatURL,
 			"headers":               e.Headers,
 			"extra_body":            e.ExtraBody,
@@ -2222,6 +2601,7 @@ func NewProviderWithProxy(e *config.ProviderEntry, proxy netclient.ProxySpec) (p
 			"vision":                config.EffectiveVision(e),
 			"vision_model_explicit": config.ExplicitModelVision(e),
 			"vision_detail":         e.VisionDetail,
+			"web_search":            config.EffectiveWebSearch(e),
 			"mode":                  e.ResponsesMode,
 			// Keep nil as nil so the responses provider can vendor-detect its
 			// default instead of accidentally treating every endpoint as stateful.
@@ -2242,12 +2622,12 @@ func NewProviderWithProxy(e *config.ProviderEntry, proxy netclient.ProxySpec) (p
 // and makes bash warn when a command references them. managedConfig names the
 // Inx-owned config files writable outside writeRoots after a fresh
 // per-write human approval.
-func addBuiltins(reg *tool.Registry, enabled, writeRoots []string, bashSpec sandbox.Spec, bashTimeout time.Duration, searchSpec builtin.SearchSpec, stderr io.Writer, workDir string, proxySpec netclient.ProxySpec, forbidReadRoots []string, readPathResolver *builtin.PathResolver, sessionGuard builtin.SessionDataGuard, managedConfig builtin.ManagedConfigPaths, overlay builtin.FileOverlay, terminal builtin.TerminalRunner) {
+func addBuiltins(reg *tool.Registry, enabled, writeRoots []string, bashSpec sandbox.Spec, bashTimeout time.Duration, searchSpec builtin.SearchSpec, stderr io.Writer, workDir string, proxySpec netclient.ProxySpec, forbidReadRoots []string, readPathResolver *builtin.PathResolver, sessionGuard builtin.SessionDataGuard, managedConfig builtin.ManagedConfigPaths, overlay builtin.FileOverlay, terminal builtin.TerminalRunner, sessionTemp *sessiontemp.Manager) {
 	// If a workspace directory is set, use workspace-bound tools that resolve
 	// paths relative to that directory. Otherwise fall back to the process-cwd
 	// compile-time builtins.
 	if workDir != "" {
-		ws := builtin.Workspace{Dir: workDir, WriteRoots: writeRoots, ForbidReadRoots: forbidReadRoots, Bash: bashSpec, BashTimeout: bashTimeout, Search: searchSpec, ProxySpec: proxySpec, ReadPaths: readPathResolver, SessionGuard: sessionGuard, ManagedConfig: managedConfig, FileOverlay: overlay, Terminal: terminal}
+		ws := builtin.Workspace{Dir: workDir, WriteRoots: writeRoots, ForbidReadRoots: forbidReadRoots, Bash: bashSpec, BashTimeout: bashTimeout, Search: searchSpec, ProxySpec: proxySpec, ReadPaths: readPathResolver, SessionGuard: sessionGuard, ManagedConfig: managedConfig, FileOverlay: overlay, Terminal: terminal, SessionTemp: sessionTemp}
 		for _, t := range ws.Tools(enabled...) {
 			reg.Add(t)
 		}
@@ -2271,9 +2651,17 @@ func addBuiltins(reg *tool.Registry, enabled, writeRoots []string, bashSpec sand
 	// preserved on replace): file-writers bound to the workspace, read tools
 	// bound to forbid-read roots, bash to the OS sandbox, web_fetch to the proxy.
 	// Only replace tools actually enabled/present.
+	bashTool := builtin.ConfineBash(bashSpec, sessionGuard, bashTimeout)
+	if rebound, ok := builtin.BindSessionTemp(bashTool, sessionTemp); ok {
+		bashTool = rebound
+	}
+	searchTool := builtin.ConfineSearch(searchSpec, bashSpec, forbidReadRoots)
+	if rebound, ok := builtin.BindSessionTemp(searchTool, sessionTemp); ok {
+		searchTool = rebound
+	}
 	confined := append(builtin.ConfineWriters(writeRoots, sessionGuard, managedConfig),
-		builtin.ConfineBash(bashSpec, sessionGuard, bashTimeout),
-		builtin.ConfineSearch(searchSpec, bashSpec, forbidReadRoots),
+		bashTool,
+		searchTool,
 		builtin.ConfineWebFetch(proxySpec))
 	confined = append(confined, builtin.ConfineReaders(forbidReadRoots)...)
 	for _, t := range confined {

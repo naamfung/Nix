@@ -81,12 +81,12 @@ func (m moveFile) Execute(ctx context.Context, args json.RawMessage) (string, er
 	} else if !os.IsNotExist(err) {
 		return "", fmt.Errorf("stat %s: %w", dst, err)
 	}
-	if dir := filepath.Dir(dst); dir != "" && dir != "." {
-		if err := os.MkdirAll(dir, 0o755); err != nil {
-			return "", fmt.Errorf("mkdir %s: %w", dir, err)
-		}
+	// Try creating directories with path variants for Windows paths under Unix-style shells.
+	dstPath, merr := tryMkdirAllVariants(tryWinPathVariants(dst))
+	if merr != nil {
+		return "", fmt.Errorf("mkdir %s: %w", filepath.Dir(dst), merr)
 	}
-	if err := renameFile(src, dst); err != nil {
+	if err := renameFile(src, dstPath); err != nil {
 		if sameFileDestination {
 			if rerr := renameSameFileDestination(src, dst); rerr != nil {
 				return "", fmt.Errorf("move %s to %s: %w", src, dst, rerr)

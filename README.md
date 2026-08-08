@@ -9,7 +9,7 @@
   &nbsp;·&nbsp;
   <a href="./docs/SPEC.md">規格</a>
   &nbsp;·&nbsp;
-  <a href="https://github.com/naamfung/inx/">官網</a>
+  <a href="https://github.com/naamfung/inx">官網</a>
 </p>
 
 <p align="center">

@@ -14,12 +14,17 @@ import (
 // Returns the decoded content and the detected encoding kind so callers
 // can re-encode on write to preserve the original charset.
 func readFileEncoded(path string) (content string, enc fileenc.Kind, err error) {
-	b, err := os.ReadFile(path)
-	if err != nil {
-		return "", 0, err
+	variants := tryWinPathVariants(path)
+	var lastErr error
+	for _, v := range variants {
+		b, err := os.ReadFile(v)
+		if err == nil {
+			enc, _ = fileenc.Detect(b)
+			return string(fileenc.Decode(b, enc)), enc, nil
+		}
+		lastErr = err
 	}
-	enc, _ = fileenc.Detect(b)
-	return string(fileenc.Decode(b, enc)), enc, nil
+	return "", 0, lastErr
 }
 
 // writeFileEncoded encodes content back to the given encoding and writes it.
@@ -27,7 +32,16 @@ func readFileEncoded(path string) (content string, enc fileenc.Kind, err error) 
 // driver holding a transient lock, a full disk) would leave the user's source
 // file empty or half-written.
 func writeFileEncoded(path string, content string, enc fileenc.Kind) error {
-	return fileutil.AtomicOverwriteFile(path, fileenc.Encode(content, enc), 0o644)
+	variants := tryWinPathVariants(path)
+	var lastErr error
+	for _, v := range variants {
+		err := fileutil.AtomicOverwriteFile(v, fileenc.Encode(content, enc), 0o644)
+		if err == nil {
+			return nil
+		}
+		lastErr = err
+	}
+	return lastErr
 }
 
 // matchLineEndings adapts an edit's old/new text to a CRLF file when the literal

@@ -116,7 +116,7 @@ func (r readFile) Execute(ctx context.Context, args json.RawMessage) (string, er
 		return "", fmt.Errorf("%s is a directory, not a file — use the ls tool to list it, or read a specific file inside it", displayPath)
 	}
 
-	f, err := os.Open(p.Path)
+	f, _, err := tryOpenPathVariants(tryWinPathVariants(p.Path))
 	if err != nil {
 		if rp.External {
 			return "", fmt.Errorf("read %s: %s", displayPath, rp.ErrorText(err))

@@ -23,7 +23,7 @@ func Enabled(mode, version string, interactive bool) bool {
 	if mode == "on" {
 		return true
 	}
-	return interactive
+	return false
 }
 
 func envOptOut() bool {

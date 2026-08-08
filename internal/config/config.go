@@ -5,13 +5,17 @@
 package config
 
 import (
+	"errors"
 	"fmt"
+	"io"
+	"io/fs"
 	"net/netip"
 	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"slices"
 	"strings"
 
 	fileencoding "inx/internal/fileutil/encoding"
@@ -63,6 +67,7 @@ type Config struct {
 	Secrets          SecretsConfig       `toml:"secrets"`
 	Remote           RemoteConfig        `toml:"remote"`
 
+	systemPromptFileSource     promptFileSource
 	providerSources            map[string]providerSourceScope
 	shadowedProjectProviders   []ProviderEntry
 	ignoredProjectDefaultModel string
@@ -78,6 +83,44 @@ type Config struct {
 	loadWarnings []string
 }
 
+type promptFileSource uint8
+
+const (
+	promptFileSourceUnknown promptFileSource = iota
+	promptFileSourceUser
+	promptFileSourceProject
+)
+
+type systemPromptFileError struct {
+	configured string
+	candidates []string
+	errors     []error
+	allMissing bool
+}
+
+func (e *systemPromptFileError) Error() string {
+	detail := "could not be read from any configured location"
+	if e.allMissing {
+		detail = "not found at any configured location"
+	}
+	message := fmt.Sprintf("system_prompt_file %q %s: %s", e.configured, detail, strings.Join(e.candidates, ", "))
+	if !e.allMissing && len(e.errors) > 0 {
+		message += ": " + errors.Join(e.errors...).Error()
+	}
+	return message
+}
+
+func (e *systemPromptFileError) Unwrap() error { return errors.Join(e.errors...) }
+
+// IsMissingSystemPromptFile reports whether every allowed location for a
+// configured prompt file was absent. Permission, containment, and other I/O
+// failures deliberately return false so callers do not start without an
+// explicitly configured prompt.
+func IsMissingSystemPromptFile(err error) bool {
+	var target *systemPromptFileError
+	return errors.As(err, &target) && target.allMissing
+}
+
 // TelemetryConfig controls content-free CLI usage metrics. It is user-global:
 // project inx.toml values are ignored so a cloned repository cannot opt a
 // user into reporting.
@@ -86,8 +129,8 @@ type TelemetryConfig struct {
 }
 
 // CLITelemetryConfigured reports whether the user has made an explicit CLI
-// telemetry choice. Persistence must preserve absence: the runtime policy
-// treats an absent value as off, so nothing is sent until the user opts in.
+// telemetry choice. The runtime policy still treats an absent value as auto,
+// but persistence must preserve absence until the first eligible consent prompt.
 func (c *Config) CLITelemetryConfigured() bool {
 	if c == nil {
 		return false
@@ -100,22 +143,18 @@ func (c *Config) CLITelemetryConfigured() bool {
 	}
 }
 
-// CLITelemetryMode returns the normalized CLI telemetry policy. An absent
-// value (no explicit choice) means off: this fork targets local-service
-// scenarios and never sends usage data unless the user opts in explicitly.
+// CLITelemetryMode returns the normalized CLI telemetry policy.
 func (c *Config) CLITelemetryMode() string {
 	if c == nil {
-		return "off"
+		return "auto"
 	}
 	switch strings.ToLower(strings.TrimSpace(c.Telemetry.CLIMetrics)) {
 	case "on":
 		return "on"
-	case "auto":
-		return "auto"
 	case "off":
 		return "off"
-	default: // empty or unrecognized: no explicit choice, default off
-		return "off"
+	default:
+		return "auto"
 	}
 }
 
@@ -196,6 +235,7 @@ type UIConfig struct {
 	ShortcutLayout string `toml:"shortcut_layout"` // classic|desktop; accepted for compatibility
 	CloseBehavior  string `toml:"close_behavior"`  // legacy desktop close behavior; prefer desktop.close_behavior
 	ShowReasoning  bool   `toml:"show_reasoning"`  // Ctrl+O / /verbose: show thinking text in CLI; false = collapsed
+	ShowTurnUsage  bool   `toml:"show_turn_usage"` // show per-request token/cost receipts in the CLI/TUI transcript
 	CursorShape    string `toml:"cursor_shape"`    // block|underline|bar; empty defaults to bar
 }
 
@@ -218,18 +258,19 @@ type DesktopConfig struct {
 	LayoutStyle             string   `toml:"layout_style"`               // classic|workbench|creation; desktop layout style
 	Theme                   string   `toml:"theme"`                      // auto|dark|light; empty resolves to auto
 	ThemeStyle              string   `toml:"theme_style"`                // graphite|aurora|slate|carbon|nocturne|amber and legacy aliases
+	TerminalTheme           string   `toml:"terminal_theme"`             // auto|dark|light; auto follows the desktop app theme
 	ExternalOpener          string   `toml:"external_opener"`            // preferred installed app used by the desktop Open control
 	CloseBehavior           string   `toml:"close_behavior"`             // quit|background; desktop window close behavior
 	DisplayMode             string   `toml:"display_mode"`               // standard|compact (legacy "minimal" maps to compact); transcript display mode
 	StatusBarStyle          string   `toml:"status_bar_style"`           // icon|text; desktop status bar metric labels
 	StatusBarItems          []string `toml:"status_bar_items"`           // ordered visible desktop status bar items
 	DefaultToolApprovalMode string   `toml:"default_tool_approval_mode"` // ask|auto|yolo; defaults to auto for newly-created desktop sessions
-	CheckUpdates            *bool    `toml:"check_updates"`              // startup update checks; nil keeps the default disabled (fork: no outbound requests)
+	CheckUpdates            *bool    `toml:"check_updates"`              // startup update checks; nil keeps the default disabled
 	// UpdateChannel is a legacy compatibility field. It is accepted on read but
 	// ignored and omitted from future canonical writes.
 	UpdateChannel     string   `toml:"update_channel"`
-	Telemetry         *bool    `toml:"telemetry"`          // anonymous launch ping plus scrubbed next-launch native crash diagnostics; nil keeps the default disabled (fork: no outbound requests)
-	Metrics           *bool    `toml:"metrics"`            // aggregate desktop metrics (anonymous signal/bucket counts, including lifecycle health; no content); nil keeps the default disabled (fork: no outbound requests)
+	Telemetry         *bool    `toml:"telemetry"`          // anonymous launch ping plus scrubbed next-launch native crash diagnostics; nil keeps the default disabled
+	Metrics           *bool    `toml:"metrics"`            // aggregate desktop metrics (anonymous signal/bucket counts, including lifecycle health; no content); nil keeps the default disabled
 	ProviderAccess    []string `toml:"provider_access"`    // desktop-only list of provider entries shown in Settings > Model > Access
 	ExpandThinking    bool     `toml:"expand_thinking"`    // true = show reasoning text expanded by default; false = collapsed
 	ConversationWidth string   `toml:"conversation_width"` // standard|full; max transcript width; empty = standard
@@ -251,14 +292,6 @@ type NotificationsConfig struct {
 	TurnDone        bool `toml:"turn_done"`
 	ApprovalRequest bool `toml:"approval_request"`
 	AskRequest      bool `toml:"ask_request"`
-}
-
-// EnvironmentConfig controls the stable startup environment block injected into
-// the model-facing prompt. Enabled nil means the default (enabled); Tools maps a
-// tool name to an explicit executable path when PATH probing is not enough.
-type EnvironmentConfig struct {
-	Enabled *bool             `toml:"enabled"`
-	Tools   map[string]string `toml:"tools"`
 }
 
 // EnvironmentEnabled reports whether startup environment probing should feed the
@@ -392,6 +425,20 @@ func (c *Config) DesktopTheme() string {
 // chooses the default style for the resolved desktop theme.
 func (c *Config) DesktopThemeStyle() string {
 	return normalizeThemeStyle(c.Desktop.ThemeStyle)
+}
+
+// DesktopTerminalTheme normalizes the integrated terminal colour preference.
+// Auto deliberately follows the resolved desktop app theme, including OS theme
+// changes while desktop.theme is also auto.
+func (c *Config) DesktopTerminalTheme() string {
+	switch strings.ToLower(strings.TrimSpace(c.Desktop.TerminalTheme)) {
+	case "dark":
+		return "dark"
+	case "light":
+		return "light"
+	default:
+		return "auto"
+	}
 }
 
 // DesktopLayoutStyle normalizes the desktop layout style. New installs default
@@ -533,11 +580,10 @@ func normalizeDesktopStatusBarItems(items []string) []string {
 }
 
 // DesktopCheckUpdates reports whether the desktop should check for updates on
-// startup. This fork defaults to disabled: the branch targets local model
-// service and intentionally avoids outbound requests unless the user opts in.
+// startup. Missing configs default to true so existing users keep update notices.
 func (c *Config) DesktopCheckUpdates() bool {
 	if c == nil || c.Desktop.CheckUpdates == nil {
-		return false
+		return true
 	}
 	return *c.Desktop.CheckUpdates
 }
@@ -639,8 +685,7 @@ func (c *Config) DesktopTelemetry() bool {
 }
 
 // DesktopMetrics reports whether the desktop sends aggregate desktop metrics —
-// anonymous (signal, bucket) counters, never content. This fork defaults to
-// disabled (no outbound requests); explicit opt-in persists a true value.
+// anonymous (signal, bucket) counters, never content. Default off.
 func (c *Config) DesktopMetrics() bool {
 	if c == nil || c.Desktop.Metrics == nil {
 		return false
@@ -1264,10 +1309,14 @@ type ProviderEntry struct {
 	ResponsesStateful *bool `toml:"responses_stateful"`
 	resolvedAPIKey    string
 	resolvedSource    CredentialSource
-	BalanceURL        string                       `toml:"balance_url"` // optional; a provider-specific wallet-balance endpoint (DeepSeek: https://api.deepseek.com/user/balance). Empty = no balance readout.
-	ContextWindow     int                          `toml:"context_window"`
-	Price             *provider.Pricing            `toml:"price"`  // legacy/provider-wide fallback
-	Prices            map[string]*provider.Pricing `toml:"prices"` // optional per-model prices; keys are model ids
+	BalanceURL        string `toml:"balance_url"` // optional; a provider-specific wallet-balance endpoint (DeepSeek: https://api.deepseek.com/user/balance). Empty = no balance readout.
+	ContextWindow     int    `toml:"context_window"`
+	// MaxOutputTokens is a protocol-neutral total output budget. Zero lets the
+	// provider choose a safe default, a positive value is explicit, and a
+	// negative value omits optional wire limits. Anthropic still requires one.
+	MaxOutputTokens int                          `toml:"max_output_tokens"`
+	Price           *provider.Pricing            `toml:"price"`  // legacy/provider-wide fallback
+	Prices          map[string]*provider.Pricing `toml:"prices"` // optional per-model prices; keys are model ids
 
 	persistedOfficialCurrency string
 
@@ -1294,18 +1343,25 @@ type ProviderEntry struct {
 	// (the field is omitted). "low" caps an image to a fixed ~85 tokens for cheap
 	// coarse reads; ignored by providers without the knob (e.g. anthropic).
 	VisionDetail string `toml:"vision_detail"`
+	// WebSearch controls the provider-executed web_search tool for compatible
+	// Anthropic and Responses endpoints. Nil lets official DeepSeek endpoints use
+	// their product default; non-nil preserves an explicit user choice across
+	// config rewrites. DeepSeek returns web_search_tool_result blocks on the
+	// Anthropic wire and response.web_search_call events on the Responses wire.
+	WebSearch *bool `toml:"web_search"`
 	// ReasoningProtocol selects the request shape for OpenAI-compatible reasoning
 	// models. Empty/auto uses the model capability registry plus endpoint
-	// heuristics; none disables automatic reasoning controls for this provider.
+	// heuristics. Explicit values select DeepSeek, GLM, Kimi K3, or standard
+	// OpenAI reasoning contracts; none disables automatic reasoning controls.
 	ReasoningProtocol string `toml:"reasoning_protocol"`
 	// SupportedEfforts lists the /effort levels this provider/model exposes.
-	// When non-empty, it overrides the built-in defaults derived from
-	// Kind/BaseURL and makes /effort configurable. "auto" is the implicit
-	// prefix — always accepted. DefaultEffort resolves it; omit DefaultEffort
-	// (or set one outside this list) to fall back to SupportedEfforts[0].
+	// Non-empty values override built-in Kind/BaseURL defaults except for fixed
+	// Kimi K3 reasoning. "auto" is the implicit prefix — always accepted.
+	// DefaultEffort resolves it; omit DefaultEffort (or set one outside this
+	// list) to fall back to SupportedEfforts[0].
 	SupportedEfforts []string `toml:"supported_efforts"`
 	// DefaultEffort is the /effort level used when the user picks "auto" or
-	// has not set Effort. Ignored when SupportedEfforts is empty.
+	// has not set Effort. Ignored for empty SupportedEfforts or fixed Kimi K3.
 	DefaultEffort string `toml:"default_effort"`
 	// ModelOverrides customizes capability metadata after ResolveModel selects a
 	// concrete model from a multi-model provider. Use it when a gateway exposes
@@ -1316,6 +1372,9 @@ type ProviderEntry struct {
 	// NoProxy reaches this provider's base_url directly, never through the proxy.
 	// For China-only endpoints a foreign-exit proxy resets the TLS handshake (#2803).
 	NoProxy bool `toml:"no_proxy"`
+	// CacheTTLMinutes overrides the vendor-default prefix-cache retention used by
+	// cold-resume prune. Zero uses the vendor default (DeepSeek/unknown 24h, DashScope/Anthropic 5m).
+	CacheTTLMinutes int `toml:"cache_ttl_minutes"`
 }
 
 type ProviderModelOverride struct {
@@ -1327,6 +1386,9 @@ type ProviderModelOverride struct {
 	// Zero inherits ProviderEntry.ContextWindow so existing configurations keep
 	// their current compaction behavior.
 	ContextWindow int `toml:"context_window"`
+	// MaxOutputTokens overrides the provider-wide output budget. Zero inherits;
+	// positive values set a cap and negative values omit optional wire limits.
+	MaxOutputTokens int `toml:"max_output_tokens"`
 }
 
 // ModelList returns the models this provider exposes: the explicit `models` list,
@@ -1423,12 +1485,7 @@ func (e *ProviderEntry) DefaultModel() string {
 
 // HasModel reports whether m is one of the provider's models.
 func (e *ProviderEntry) HasModel(m string) bool {
-	for _, x := range e.ModelList() {
-		if x == m {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(e.ModelList(), m)
 }
 
 // PriceForModel returns the configured per-1M-token price for model. Per-model
@@ -1436,10 +1493,6 @@ func (e *ProviderEntry) HasModel(m string) bool {
 func (e *ProviderEntry) PriceForModel(model string) *provider.Pricing {
 	if e == nil {
 		return nil
-	}
-	// Local/self-hosted models have zero cost.
-	if e.BaseURL != "" && providerBaseURLAllowsMissingAPIKey(e.BaseURL) {
-		return &provider.Pricing{CacheHit: 0, Input: 0, Output: 0, Currency: ""}
 	}
 	if e.Prices != nil {
 		if p := e.Prices[strings.TrimSpace(model)]; p != nil {
@@ -1478,6 +1531,9 @@ func (e *ProviderEntry) applyModelOverride() {
 	}
 	if ov.ContextWindow > 0 {
 		e.ContextWindow = ov.ContextWindow
+	}
+	if ov.MaxOutputTokens != 0 {
+		e.MaxOutputTokens = ov.MaxOutputTokens
 	}
 }
 
@@ -1760,7 +1816,7 @@ func Default() *Config {
 		ConfigVersion:    5,
 		DefaultModel:     "deepseek-flash",
 		CredentialsStore: CredentialsStoreAuto,
-		UI:               UIConfig{Theme: "auto"},
+		UI:               UIConfig{Theme: "auto", ShowTurnUsage: true},
 		Desktop:          DesktopConfig{DefaultToolApprovalMode: "auto", ConversationWidth: "standard"},
 		Notifications: NotificationsConfig{
 			Enabled:         false,
@@ -2101,23 +2157,98 @@ func (c *Config) ResolveSystemPrompt() (string, error) {
 
 // ResolveSystemPromptForRoot is like ResolveSystemPrompt but resolves a relative
 // system_prompt_file against root. Desktop tabs pass their workspace root here so
-// prompt files are project-scoped even when the process cwd is elsewhere.
+// prompt files are project-scoped even when the process cwd is elsewhere. A path
+// inherited from user config may fall back to Inx home, while a path chosen
+// by project config is confined to the workspace and never probes user files.
 func (c *Config) ResolveSystemPromptForRoot(root string) (string, error) {
-	if c.Agent.SystemPromptFile != "" {
-		path := c.Agent.SystemPromptFile
-		if !filepath.IsAbs(path) {
-			path = filepath.Join(resolveRoot(root), path)
+	path := c.Agent.SystemPromptFile
+	if path == "" {
+		return c.InlineSystemPrompt(), nil
+	}
+
+	if c.systemPromptFileSource == promptFileSourceProject {
+		if filepath.IsAbs(path) || !filepath.IsLocal(filepath.Clean(path)) {
+			return "", fmt.Errorf("project system_prompt_file %q must be a relative path within the workspace", path)
 		}
-		b, err := fileencoding.ReadFileUTF8(path)
+		candidate := filepath.Join(resolveRoot(root), path)
+		b, err := readProjectSystemPromptFile(root, path)
 		if err != nil {
-			return "", fmt.Errorf("system_prompt_file: %w", err)
+			return "", newSystemPromptFileError(path, []string{candidate}, []error{err})
 		}
 		return strings.TrimSpace(string(b)), nil
 	}
-	if strings.TrimSpace(c.Agent.SystemPrompt) == "" {
-		return DefaultSystemPrompt, nil
+
+	if filepath.IsAbs(path) {
+		b, err := fileencoding.ReadFileUTF8(path)
+		if err != nil {
+			return "", newSystemPromptFileError(path, []string{path}, []error{err})
+		}
+		return strings.TrimSpace(string(b)), nil
 	}
-	return c.Agent.SystemPrompt, nil
+
+	candidates := []string{filepath.Join(resolveRoot(root), path)}
+	if home := InxHomeDir(); home != "" {
+		homeCandidate := filepath.Join(home, path)
+		if filepath.Clean(homeCandidate) != filepath.Clean(candidates[0]) {
+			candidates = append(candidates, homeCandidate)
+		}
+	}
+	readErrors := make([]error, 0, len(candidates))
+	for _, candidate := range candidates {
+		b, err := fileencoding.ReadFileUTF8(candidate)
+		if err == nil {
+			return strings.TrimSpace(string(b)), nil
+		}
+		readErrors = append(readErrors, fmt.Errorf("%s: %w", candidate, err))
+	}
+	return "", newSystemPromptFileError(path, candidates, readErrors)
+}
+
+func readProjectSystemPromptFile(root, path string) ([]byte, error) {
+	workspace, err := filepath.Abs(resolveRoot(root))
+	if err != nil {
+		return nil, fmt.Errorf("resolve workspace root: %w", err)
+	}
+	rootHandle, err := os.OpenRoot(workspace)
+	if err != nil {
+		return nil, fmt.Errorf("open workspace root %q: %w", workspace, err)
+	}
+	defer rootHandle.Close()
+	f, err := rootHandle.Open(filepath.Clean(path))
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	b, err := io.ReadAll(f)
+	if err != nil {
+		return nil, err
+	}
+	return fileencoding.DecodeToUTF8(b), nil
+}
+
+func newSystemPromptFileError(configured string, candidates []string, readErrors []error) error {
+	allMissing := len(readErrors) > 0
+	for _, err := range readErrors {
+		if !errors.Is(err, fs.ErrNotExist) {
+			allMissing = false
+			break
+		}
+	}
+	return &systemPromptFileError{
+		configured: configured,
+		candidates: append([]string(nil), candidates...),
+		errors:     append([]error(nil), readErrors...),
+		allMissing: allMissing,
+	}
+}
+
+// InlineSystemPrompt returns the configured system_prompt, or DefaultSystemPrompt
+// when unset. It is the fallback when system_prompt_file cannot be read.
+func (c *Config) InlineSystemPrompt() string {
+	if strings.TrimSpace(c.Agent.SystemPrompt) == "" {
+		return DefaultSystemPrompt
+	}
+	return c.Agent.SystemPrompt
 }
 
 // Validate checks that the selected model's provider is usable.

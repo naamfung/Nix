@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -29,7 +30,14 @@ import (
 )
 
 const (
-	bashWaitDelay = 5 * time.Second
+	bashWaitDelay      = 5 * time.Second
+	idleTimeoutInitial = 10 * time.Minute // 保底十分钟起步
+	idleTimeoutExtend  = 2 * time.Minute  // 每次续命2分钟
+)
+
+var (
+	errBashTimeout     = errors.New("bash foreground timeout")
+	errBashIdleTimeout = errors.New("bash foreground idle timeout")
 )
 
 func init() { tool.RegisterBuiltin(bash{}) }
@@ -481,64 +489,58 @@ func bashSandboxEscapeSessionAllowed(ctx context.Context, command string, args j
 	})
 }
 
-// runForegroundDetailed uses the shared shellrun collector so model bash and
-// user !command share exit-code / phase / output-tail classification.
+// runForegroundDetailed uses the idle timeout manager with activity-based extension
+// so model bash and user !command share exit-code / phase / output-tail classification.
 func (b bash) runForegroundDetailed(ctx context.Context, p bashParams, sh sandbox.Shell, argv []string, wrapped bool, cmdEnv []string) (string, *tool.ShellExecution, error) {
 	ex := shellrun.DescriptorFromShell(sh)
-	var progress func(string)
-	if emit, ok := tool.ProgressFrom(ctx); ok {
-		progress = emit
+
+	runCtx, cancel := context.WithCancelCause(ctx)
+	idleMgr, runCtx := newIdleTimeoutManager(runCtx)
+	defer cancel(nil)
+
+	cmd := exec.CommandContext(runCtx, argv[0], argv[1:]...)
+	cmd.Dir = b.workDir
+	cmd.Env = cmdEnv
+	cmd.WaitDelay = bashWaitDelay
+
+	var outBuf bytes.Buffer
+	resetFn := func() {
+		idleMgr.reset()
 	}
-	track := shouldTrackShellProcess(wrapped, sh, p.Command, p.PreserveBackgroundProcesses)
-	res := shellrun.RunForeground(ctx, shellrun.Request{
-		Argv:              argv,
-		Dir:               b.workDir,
-		Env:               cmdEnv,
-		Timeout:           b.foregroundTimeout(),
-		WaitDelay:         bashWaitDelay,
-		CommandPreview:    commandPreview(p.Command),
-		ShellKind:         sh.Kind.String(),
-		ShellPath:         sh.Path,
-		Source:            "bash_tool",
-		Track:             track,
-		PreserveWaitDelay: p.PreserveBackgroundProcesses,
-		Progress:          progress,
-	})
-	// A foreground command that spawned a lingering child (e.g. `bazel run`'s
-	// server) leaves it in the process group; Wait only reaped the shell leader.
-	// Kill the group so those don't accumulate into an OOM (#3702). On cancel/
-	// timeout the command's Cancel path already did this; this covers normal exit.
-	// shellrun owns the tool-local timeout context, so treat timed_out/cancelled
-	// as ctx.Err()!=nil for the reap decision.
-	reapCtx := ctx
-	if res.State == tool.ShellStateTimedOut || res.State == tool.ShellStateCancelled || ctx.Err() != nil {
-		// Force reap on forced stops even when preserve_background_processes is set.
-		reapShellProcess(res.Cmd, res.Tracked)
-	} else if shouldReapAfterRun(reapCtx, sh, p.Command, p.PreserveBackgroundProcesses) {
-		reapShellProcess(res.Cmd, res.Tracked)
+	writer := &idleResetWriter{
+		w:       &outBuf,
+		resetFn: resetFn,
 	}
 
-	ex.State = res.State
-	ex.FailurePhase = res.FailurePhase
-	ex.ExitCode = res.ExitCode
-	ex.OutputTail = res.OutputTail
-	switch res.State {
-	case tool.ShellStateCompleted:
-		ex.MutationRisk = tool.ShellMutationMayHaveCompleted
-	case tool.ShellStateNotRun:
-		ex.MutationRisk = tool.ShellMutationNotStarted
-	case tool.ShellStateFailed:
-		if res.FailurePhase == tool.ShellPhaseLaunch || res.FailurePhase == tool.ShellPhasePreflight {
-			ex.MutationRisk = tool.ShellMutationNotStarted
-		} else {
-			ex.MutationRisk = tool.ShellMutationMayBePartial
-		}
-	case tool.ShellStateTimedOut, tool.ShellStateCancelled:
+	cmd.Stdout = writer
+	cmd.Stderr = writer
+
+	err := cmd.Run()
+
+	if errors.Is(context.Cause(runCtx), errBashIdleTimeout) {
+		ex.State = tool.ShellStateTimedOut
+		ex.FailurePhase = tool.ShellPhaseTimeout
 		ex.MutationRisk = tool.ShellMutationMayBePartial
-	default:
-		ex.MutationRisk = tool.ShellMutationUnknown
+		return outBuf.String(), ex, fmt.Errorf("command timed out (> %s)", idleTimeoutInitial)
 	}
-	return res.Combined, ex, res.Err
+
+	if err != nil {
+		ex.State = tool.ShellStateFailed
+		ex.FailurePhase = tool.ShellPhaseExecution
+		ex.MutationRisk = tool.ShellMutationMayBePartial
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			code := int(exitErr.ExitCode())
+			ex.ExitCode = tool.IntPtr(code)
+		}
+		return outBuf.String(), ex, err
+	}
+
+	ex.State = tool.ShellStateCompleted
+	ex.MutationRisk = tool.ShellMutationMayHaveCompleted
+	ex.ExitCode = tool.IntPtr(0)
+
+	return outBuf.String(), ex, nil
 }
 
 func normalizeBashRunError(ctx context.Context, err error, preserveBackgroundProcesses bool) error {
@@ -677,6 +679,84 @@ func commandPreview(cmd string) string {
 		return string(r[:max]) + "…"
 	}
 	return cmd
+}
+
+// idleTimeoutManager manages an idle timeout context that extends on activity.
+//
+// The timeout is a single absolute deadline: it starts at initialTimeout and
+// every activity (output) pushes it out by extendTimeout, never pulling it
+// back in. A combined command such as "short; echo sep; long" therefore keeps
+// its full initial budget after the separator's output instead of having the
+// remaining time collapse to the shorter extension window.
+type idleTimeoutManager struct {
+	cancel   context.CancelCauseFunc
+	timer    *time.Timer
+	resetCh  chan struct{}
+	deadline time.Time
+	mu       sync.Mutex
+}
+
+func newIdleTimeoutManager(runCtx context.Context) (*idleTimeoutManager, context.Context) {
+	runCtx, cancel := context.WithCancelCause(runCtx)
+	m := &idleTimeoutManager{
+		cancel:   cancel,
+		timer:    time.NewTimer(idleTimeoutInitial),
+		resetCh:  make(chan struct{}, 1),
+		deadline: time.Now().Add(idleTimeoutInitial),
+	}
+
+	go func() {
+		// Wait for either the timer to expire or a reset signal
+		for {
+			select {
+			case <-m.timer.C:
+				m.cancel(errBashIdleTimeout)
+				return
+			case <-m.resetCh:
+				// Deferral-style extension: extend the absolute deadline by
+				// idleTimeoutExtend from its current value (monotonic, never
+				// shortened), then re-arm the timer for what remains.
+				m.mu.Lock()
+				m.deadline = m.deadline.Add(idleTimeoutExtend)
+				if !m.timer.Stop() {
+					select {
+					case <-m.timer.C:
+					default:
+					}
+				}
+				remaining := time.Until(m.deadline)
+				m.mu.Unlock()
+				if remaining <= 0 {
+					m.cancel(errBashIdleTimeout)
+					return
+				}
+				m.timer.Reset(remaining)
+			case <-runCtx.Done():
+				m.timer.Stop()
+				return
+			}
+		}
+	}()
+
+	return m, runCtx
+}
+
+func (m *idleTimeoutManager) reset() {
+	select {
+	case m.resetCh <- struct{}{}:
+	default:
+	}
+}
+
+// idleResetWriter wraps an io.Writer and triggers a reset function on each Write.
+type idleResetWriter struct {
+	w       io.Writer
+	resetFn func()
+}
+
+func (iw *idleResetWriter) Write(p []byte) (n int, err error) {
+	iw.resetFn()
+	return iw.w.Write(p)
 }
 
 func bashCommandEnv(ctx context.Context) []string {
